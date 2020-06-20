@@ -4,6 +4,7 @@ if(!is.null(dev.list())) dev.off()
 cat("\014") 
 
 #Cargar librerias
+library(leaps)
 library(spgwr)
 library(adespatial)
 library(raster)
@@ -23,35 +24,46 @@ library(prettymapr)
 library(lattice)
 library(xtable)
 library(car)
-
+library(tidyverse)
 #cargar funciones
 load("C:/Users/rmartin/Documents/11 semestre/Geoestadística/FuncDatosArea/ImagenDatosDeArea")
-
+set.seed(123)
 setwd("C:/Users/rmartin/Documents/11 semestre/Geoestadística/ProyectoDatosArea")
 
 #puntos
 balPt<-readOGR('./baltimore','baltim')
-plot(balPt)
 
+x11()
+plot(balPol, col='#c7d6fc')
+plot(balPt,add=T,col="#3f9945",pch = 18)
 #poligonos de voronoi
 balPol <- voronoi(balPt)
-plot(balPol)
-bal.poly <- balPol
-##Variable a explicar
 
+bal.poly <- balPol
+coords <- coordinates(bal.poly)
+##Variable a explicar
 PRICE <- as.data.frame(bal.poly)$PRICE
 x <- c(PRICE)
 x1<-(x-mean(x))/sd(x) 
 
+writeOGR(bal.poly, dsn = "shapefile", layer = "map",
+         driver = "ESRI Shapefile" )
 
-
+A_uno <- function(x) {
+  if (x > 0) {1} else {0}
+}
+bment2<-c()
+for (i in c(bal.poly$BMENT)){
+  bment2<-c(bment2,A_uno(i))
+}
+bal.poly$BMENT<-bment2
 
 x11()
 op=par(mfrow=c(1,2))
 plot(balPol)
 plot(coords)
 
-coords <- coordinates(balPol)
+
 rn <- sapply(slot(balPol, "polygons"), function(x) slot(x, "ID"))
 k1 <- knn2nb(knearneigh(coords))
 all.linked <- max(unlist(nbdists(k1, coords)))
@@ -60,18 +72,14 @@ summary(bal.nb.0.all, coords)
 plot(balPol, border="gray7") #mirar las conexiones de los vecinos
 plot(bal.nb.0.all, coords, add=TRUE, col="darkorchid")
 title(main=paste("Distance based neighbours 0-", format(all.linked), " distance units", sep=""))
-base.map <- gmap(balPol, type = "hybrid")
 
-reprojected.palo_alto <- spTransform(balPol, base.map@crs)
-
-plot(base.map)
 #Mapa con etiquetas del ID
 x11()
 par(mai=c(0,0,0,0))
 set.seed(1)
 plot(balPol, col=sample(rainbow(500))[1:49])
 xy <- coords
-points(xy, cex=3, pch=20, col='white')
+points(xy, cex=0.3, pch=20, col='white')
 text(balPol, 'STATION', cex=0.52, col='black')
 
 
@@ -136,6 +144,7 @@ bal.kn9<-knn2nb(knearneigh(coords, k=9), row.names=IDs)
 #============================================================
 # Criterios basados en gr?ficas
 #============================================================
+x11()
 op=par(mfrow=c(2,2))
 trinb=tri2nb(coords)
 delaunay <-nb2listw(trinb, style="W")
@@ -272,50 +281,167 @@ W_sel$best$MEM.select
 # elegida ser? K vecinos con 2 vecinos m?s cercanos.
 Best.SWM <- Pesos.list[W_sel$best.id]   
 
-k.lw.2BIN<-nb2listw(bal.kn2, style="B")
 
 PRICE <- as.data.frame(bal.poly)$PRICE
 x <- c(PRICE)
 
-# Otra forma m?s simple ser?a:
+# guardar como matriz
 W <- as.matrix(as_dgRMatrix_listw(k.lw.2BIN))
 W
 
-x1<-(x-mean(x))/sd(x)    
-W_sel.stand <- listw.select(x1, Pesos.list, MEM.autocor = "all", p.adjust = TRUE, nperm = 50)
-W_sel.stand $best.id
 
 
-#Cuando lo hago con PRICE dice k vecinos 2 y con PRICE estandarizado dice que reina
+#Mejor matriz de pesos reina de orden 1
 
 ##matriz seleccionada REINA 1##
 
 bal.nb.q <- poly2nb(balPol) 
 
-pesosw<-nb2listw(bal.nb.q, style="W")
+bal.lw<-nb2listw(bal.nb.q, style="W")
 
-q.lw.1<-pesosw
 ###########################################################
 ###### AUTOCORRELACION ####################################
 ###########################################################
-
+var <- as.data.frame(bal.poly)['PATIO']
+xv <- as.numeric(as.character(unlist(c(var))))
+x1v<-(xv-mean(xv))/sd(xv)  
+set.seed(123)
+moran.test(x1v, bal.lw, zero.policy=T, alternative="two.sided")
 
 #### I DE MORAN GLOBAL PARA LA VARIABLE DEPENDIENTE
 
 set.seed(123)
-moran.test(x1, q.lw.1, zero.policy=T, alternative="two.sided")#rechazar hipotesis nula
+moran.test(x1, bal.lw, zero.policy=T, alternative="two.sided")
 
-# Gráfico de dispersión del índice de Moran
+# Gr?fico de dispersi?n del ?ndice de Moran
+png("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Dispersion/test.png",
+    width = 2200, height = 1600,units="px",res=300)
+
+mp<-moran.plot(xv, bal.lw, main="Gráfico de Dispersión de Moran",  ylab="W_PRICE", xlab="PRICE")      # Cambiar por "x1", para la estandarizaci?n
+dev.off()
+
+# Correlograma Moran a partir de matriz contiguidad espacial
+sp.cr <- sp.correlogram(bal.nb.q, x, order=9, method="C", style="W", zero.policy=T)
 x11()
-mp<-moran.plot(x1, q.lw.1, main="Gráfico de Dispersión de Moran",  ylab="W-PRICE", xlab="PRICE")  
+plot(sp.cr,main='Correlograma cr')
+png(paste("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Correlograma/correl_PRICE.png"),
+    width = 2200, height = 1600,units="px",res=300)
+cor.s <- sp.correlogram(bal.nb.q, x, order=9, method="I", style="W", zero.policy=T)
+#x11()
+plot(cor.s,main='Correlograma PRICE')
+dev.off()
+
+vars<-c('NROOM','DWELL','NBATH','PATIO','FIREPL','AC','BMENT','NSTOR','GAR','AGE','CITCOU','LOTSZ','SQFT')
+
+table_bivariate(bivariadoGlobal$SQFT)
+
+#guarda histogramas
+a=palette(rainbow(13)) 
+col=1
+for (i in vars)
+{
+  j<-i
+  var <- as.data.frame(bal.poly)[j]
+  xv <- as.numeric(as.character(unlist(c(var))))
+  png(paste("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Histogramas/hist",i,".png"),
+      width = 2200, height = 1600,units="px",res=300)
+  hist(xv,main=paste("Histogram",i),col=a[col])
+  dev.off()
+  col=col+1
+}
 
 
-# LISA Cluster Map
-moran.cluster(balPol@data$PRICE,q.lw.1, zero.policy = T, bal.poly, significant=T)
+#guarda coeficientes y graficas variables independietnes
+iMoranGlobal<-list()
+bivariadoGlobal<-list()
+correlbiva<-list()
+for (i in vars)
+{
+  j<-i
+  var <- as.data.frame(bal.poly)[j]
+  xv <- as.numeric(as.character(unlist(c(var))))
+  x1v<-(xv-mean(xv))/sd(xv)  
+  set.seed(123)
+  iMoranGlobal[[i]]<-moran.test(x1v, bal.lw, zero.policy=T, alternative="two.sided")
+  bivariadoGlobal[[i]]<-moranbi1.test(x=x1,y=x1v,bal.lw,zero.policy =T,randomisation =T,
+                                      alternative="two.sided",adjust.n=TRUE)
+  
+  png(paste("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Dispersion/disp",i,".png"),
+    width = 2200, height = 1600,units="px",res=300)
+  moranbi.plot(x1,x1v,quiet =F,zero.policy =T,listw=bal.lw, xlab = "PRICE", ylab = j,main=paste("PRICE_",i))
+  dev.off()
+  png(paste("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Correlograma/correl",i,".png"),
+      width = 2200, height = 1600,units="px",res=300)
+  correlbiva[[i]] <- spcorrelogram.bi(bal.nb.q, x1, x1v, order=9, 
+                                method="I", style="W", zero.policy=T)
+  plot(correlbiva[[i]],main=paste("PRICE_",i))
+  dev.off()
+}
+#crear tabla i de moran global
+z<-c()
+p<-c()
+I<-c()
+E<-c()
+V<-c()
+for (i in vars)
+{
+  j<-i
+  var <- as.data.frame(bal.poly)[j]
+  xv <- as.numeric(as.character(unlist(c(var))))
+  x1v<-(xv-mean(xv))/sd(xv)  
+  set.seed(123)
+  z<-c(z,moran.test(x1v, bal.lw, zero.policy=T, alternative="two.sided")$statistic)
+  p<-c(p,moran.test(x1v, bal.lw, zero.policy=T, alternative="two.sided")$p.value)
+  I<-c(I,moran.test(x1v, bal.lw, zero.policy=T, alternative="two.sided")$estimate["Moran I statistic"])
+  E<-c(E,moran.test(x1v, bal.lw, zero.policy=T, alternative="two.sided")$estimate["Expectation"])
+  V<-c(V,moran.test(x1v, bal.lw, zero.policy=T, alternative="two.sided")$estimate["Variance"])
+}
+moranglob.df <- data.frame("VAR" = vars, "Z" = z,"P-value"=p,"I de Moran"=I,"E(I)"=E,"V(I)"=V)
+xtable(moranglob.df , digits = 6)
 
-# Getis Cluster Map
+#tablas del bivariado
+table_bivariate <- function(name_0) {
+  y0<-c("Z(I)","P-value","I de Moran","E(I)","V(I)")
+  z<-name_0$statistic["Bivariate Moran Z(I) statistic"]
+  p<-name_0$p.value[1]
+  I<-name_0$estimate['Bivariate Moran I statistic']
+  E<-name_0$estimate["Expectation"]
+  V<-name_0$estimate["Variance"]
+  y1<-c(z,p,I,E,V)
+  table.df <- data.frame(y0,y1)
+  xtable(data.frame(table.df$y0,table.df$y1), digits = 6)
+}
+
+table_bivariate(bivariadoGlobal$DWELL)
+
+
+
+#### I DE MORAN GLOBAL PARA LAS VARIABLES INDEPENDIENTES
+iMoranGlobal
+# I Moran bivariado global 
+bivariadoGlobal
+
+# LISA Cluster Map VARIABLE DEPENDIENTE
 x11()
-getis.cluster(balPol@data$PRICE,q.lw.1, zero.policy = T,bal.poly, significant=T)
+moran.cluster(x1, pesosw, zero.policy = T, col.poly, significant=T)
+
+# LISA Cluster Map VARIABLE INDEPENDIENTE
+x11()
+moran.cluster(x1, bal.lw, zero.policy = T, bal.poly, significant=T)
+moran.cluster(x1.OWNH, pesosw, zero.policy = T, col.poly, significant=T)
+moran.cluster(x1.POP65, pesosw, zero.policy = T, col.poly, significant=T)
+moran.cluster(x1.UNEMP, pesosw, zero.policy = T, col.poly, significant=T)
+
+# I de moran local para la variable independiente 
+
+set.seed(123)
+PRICE_LOCAL<-localmoran(x1,bal.lw,zero.policy = T)
+PRICE_LOCAL
+
+#G de getis local 
+
+lg<-localG(x1,listw=pesosw,zero.policy = T)
+lg
 
 ###########################################################
 ###### AUTOCORRELACION BIVARIADA ##################
@@ -340,8 +466,10 @@ getis.cluster(balPol@data$PRICE,q.lw.1, zero.policy = T,bal.poly, significant=T)
 #LOTSZ	lot size in hundreds of square feet
 #SQFT	interior living space in hundreds of square feet
 attach(balPol@data)
-mod.lin <- lm(PRICE ~ NROOM+DWELL+NBATH+PATIO+FIREPL+AC+BMENT+NSTOR+GAR+AGE+CITCOU+LOTSZ+SQFT, data = balPol@data)
+mod.lin <- lm(PRICE ~ NROOM+DWELL+NBATH+PATIO+FIREPL+AC+BMENT+NSTOR+GAR+AGE+CITCOU+LOTSZ+SQFT, data = bal.poly@data)
 summary(mod.lin)
+models <- regsubsets(PRICE~., data = balPol@data, nvmax = 13)
+summary(models)
 
 
 lm.morantest(mod.lin, pesosw, alternative = "greater")
