@@ -25,6 +25,8 @@ library(lattice)
 library(xtable)
 library(car)
 library(tidyverse)
+library(stargazer)
+library(MASS)
 #cargar funciones
 load("C:/Users/rmartin/Documents/11 semestre/Geoestadística/FuncDatosArea/ImagenDatosDeArea")
 set.seed(123)
@@ -32,12 +34,12 @@ setwd("C:/Users/rmartin/Documents/11 semestre/Geoestadística/ProyectoDatosArea"
 
 #puntos
 balPt<-readOGR('./baltimore','baltim')
-
+#poligonos de voronoi
+balPol <- voronoi(balPt)
 x11()
 plot(balPol, col='#c7d6fc')
 plot(balPt,add=T,col="#3f9945",pch = 18)
-#poligonos de voronoi
-balPol <- voronoi(balPt)
+
 
 bal.poly <- balPol
 coords <- coordinates(bal.poly)
@@ -46,22 +48,15 @@ PRICE <- as.data.frame(bal.poly)$PRICE
 x <- c(PRICE)
 x1<-(x-mean(x))/sd(x) 
 
-writeOGR(bal.poly, dsn = "shapefile", layer = "map",
-         driver = "ESRI Shapefile" )
+# writeOGR(balPol, dsn = "shapefile", layer = "balPol",driver = "ESRI Shapefile" )
 
-A_uno <- function(x) {
-  if (x > 0) {1} else {0}
-}
-bment2<-c()
-for (i in c(bal.poly$BMENT)){
-  bment2<-c(bment2,A_uno(i))
-}
-bal.poly$BMENT<-bment2
-
-x11()
-op=par(mfrow=c(1,2))
-plot(balPol)
-plot(coords)
+#corregir BMENT
+balPol$BMENT<-ifelse(balPol$BMENT==0,0,1)
+bal.poly$BMENT<-balPol$BMENT
+# x11()
+# op=par(mfrow=c(1,2))
+# plot(balPol)
+# plot(coords)
 
 
 rn <- sapply(slot(balPol, "polygons"), function(x) slot(x, "ID"))
@@ -87,7 +82,7 @@ text(balPol, 'STATION', cex=0.52, col='black')
 # GRAFICO VARIABLE ENDOGENA
 #######################################################
 
-
+x11()
 n=length(bal.poly)
 l2 = list("SpatialPolygonsRescale", layout.north.arrow(), offset =  c(0,0), scale = 0.5)   # Layout
 l3 = list("SpatialPolygonsRescale", layout.scale.bar(), offset = c(1,1),  scale = 0.5, fill=c("black"))
@@ -168,8 +163,9 @@ plot(relativenb,coords,add=T,col="orange")
 title(main="Vecinos relativos")
 par(op)
 
-sp.cr <- sp.correlogram(bal.kn9, balPol$PRICE, order=9, method="corr", style="W", zero.policy=T)
-cor <- sp.correlogram(bal.kn9, balPol$PRICE, order=9, method="I", style="W", zero.policy=T)
+x11()
+sp.cr <- sp.correlogram(trinb, balPol$PRICE, order=9, method="corr", style="W", zero.policy=T)
+cor <- sp.correlogram(trinb, balPol$PRICE, order=9, method="I", style="W", zero.policy=T)
 plot(cor, main="PRICE")
 
 #==========================================================================
@@ -241,7 +237,9 @@ summary(test.W(balPol@data$PRICE,bal.kn8))
 k.lw.9<-nb2listw(bal.kn9, style="W")
 summary(test.W(balPol@data$PRICE,bal.kn9))
 
-#graficos
+
+1-2*100/211
+5.2#graficos
 delaunay.lw<-nb2listw(trinb, style="W")
 summary(test.W(balPol@data$PRICE,trinb))
 esfera.inf.lw<-nb2listw(soinb, style="W")
@@ -251,7 +249,8 @@ summary(test.W(balPol@data$PRICE,gabrielnb))
 vec.relative.lw<-nb2listw(relativenb, style="W")
 summary(test.W(balPol@data$PRICE,relativenb))
 
-moran.test(balPol@data$PRICE, nb2listw(bal.nb.q, style="W", zero.policy=T), zero.policy=T, alternative = "two.sided")
+0.512001474/13.13
+moran.test(balPol@data$PRICE,delaunay.lw , zero.policy=T, alternative = "two.sided")
 moran.test(balPol@data$PRICE, nb2listw(bal.lags.q[[1]], style="W", zero.policy=T), zero.policy=T, alternative = "two.sided")
 
 Pesos.list<-list(reina1=q.lw.1,reina2=q.lw.2,reina3=q.lw.3,reina4=q.lw.4,reina5=q.lw.5,
@@ -269,6 +268,7 @@ nbw <- length(Pesos.list)
 1 - (1 - 0.05)^(nbw)
 # la optimizaci?n para la selecci?n se realiza maximizando el R cuadrado ajustado (R2 Adjust) o minimizando 
 # la autocorrelaci?n espacial residual.
+set.seed(123)
 W_sel <- listw.select(balPol@data$PRICE, Pesos.list, MEM.autocor = "all", p.adjust = TRUE, nperm = 50)
 W_sel$candidates
 W_sel$best.id
@@ -291,18 +291,17 @@ W
 
 
 
-#Mejor matriz de pesos reina de orden 1
-
-##matriz seleccionada REINA 1##
+##matriz seleccionada lunay##
 
 bal.nb.q <- poly2nb(balPol) 
-
-bal.lw<-nb2listw(bal.nb.q, style="W")
+bal.nb=tri2nb(coords)
+bal.lw <-nb2listw(bal.nb, style="W")
+write.nb.gal(bal.nb, 'shapefile/balPol.gal')
 
 ###########################################################
 ###### AUTOCORRELACION ####################################
 ###########################################################
-var <- as.data.frame(bal.poly)['PATIO']
+var <- as.data.frame(bal.poly)['PRICE']
 xv <- as.numeric(as.character(unlist(c(var))))
 x1v<-(xv-mean(xv))/sd(xv)  
 set.seed(123)
@@ -314,32 +313,33 @@ set.seed(123)
 moran.test(x1, bal.lw, zero.policy=T, alternative="two.sided")
 
 # Gr?fico de dispersi?n del ?ndice de Moran
-png("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Dispersion/test.png",
+png("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Dispersion/PRICE.png",
     width = 2200, height = 1600,units="px",res=300)
 
-mp<-moran.plot(xv, bal.lw, main="Gráfico de Dispersión de Moran",  ylab="W_PRICE", xlab="PRICE")      # Cambiar por "x1", para la estandarizaci?n
+mp<-moran.plot(x, bal.lw, main="Gráfico de Dispersión de Moran",  ylab="W_PRICE", xlab="PRICE")      # Cambiar por "x1", para la estandarizaci?n
 dev.off()
 
 # Correlograma Moran a partir de matriz contiguidad espacial
-sp.cr <- sp.correlogram(bal.nb.q, x, order=9, method="C", style="W", zero.policy=T)
+sp.cr <- sp.correlogram(bal.nb, x, order=9, method="C", style="W", zero.policy=T)
 x11()
 plot(sp.cr,main='Correlograma cr')
 png(paste("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Correlograma/correl_PRICE.png"),
     width = 2200, height = 1600,units="px",res=300)
-cor.s <- sp.correlogram(bal.nb.q, x, order=9, method="I", style="W", zero.policy=T)
+cor.s <- sp.correlogram(trinb, x, order=9, method="I", style="W", zero.policy=T)
 #x11()
 plot(cor.s,main='Correlograma PRICE')
 dev.off()
 
 vars<-c('NROOM','DWELL','NBATH','PATIO','FIREPL','AC','BMENT','NSTOR','GAR','AGE','CITCOU','LOTSZ','SQFT')
 
-table_bivariate(bivariadoGlobal$SQFT)
-
+table_bivariate(bivariadoGlobal$BMENT)
+hist(PRICE)
 #guarda histogramas
 a=palette(rainbow(13)) 
 col=1
 for (i in vars)
 {
+  i<-'PRICE'
   j<-i
   var <- as.data.frame(bal.poly)[j]
   xv <- as.numeric(as.character(unlist(c(var))))
@@ -350,33 +350,83 @@ for (i in vars)
   col=col+1
 }
 
+x11()
+
+png(paste("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Histogramas/hist-boxplot","PRICE",".png"),width = 3000, height = 1000,units="px",res=300)
+op=par(mfrow=c(1,3))
+hist(balPol$PRICE,main=paste("Histograma","PRICE"),col='#2d572c')
+boxplot(balPol$PRICE,main=paste("BoxPlot","PRICE"),col='#2d572c')
+qqPlot(balPol$PRICE,main=paste("QqPlot","PRICE"),col='#2d572c')
+par(op)
+dev.off()
+hist(1:5, col="cornflowerblue",breaks=1:1)
+a=palette(rainbow(13)) 
+png(paste("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Histogramas/hist","N1",".png"),width = 3000, height = 1000,units="px",res=300)
+op=par(mfrow=c(1,3))
+
+hist(balPol$NROOM,main=paste("Histograma",'NROOM'),col=a[1],xlab='min: 3    |    median: 5.182    |    mean: 5.182 \n 1stQ: 5    |    3rdQ: 6    |    max: 10')
+hist(balPol$NBATH,main=paste("Histograma",'NBATH'),col=a[2],xlab='min: 1    |    median: 1.5    |    mean: 1.565 \n 1stQ: 1    |    3rdQ: 2    |    max: 5')
+hist(balPol$NSTOR,main=paste("Histograma",'NSTOR'),col=a[3],xlab='min: 1    |    median: 2    |    mean: 1.904 \n 1stQ: 2    |    3rdQ: 2    |    max: 3')
+par(op)
+dev.off()
+png(paste("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Histogramas/hist","N2",".png"),width = 3000, height = 1000,units="px",res=300)
+op=par(mfrow=c(1,3))
+# summary(balPol$SQFT)
+hist(balPol$GAR,main=paste("Histograma",'GAR'),col=a[4],xlab='min: 0    |    median: 0    |    mean: 2.344 \n 1stQ: 0    |    3rdQ: 0    |    max: 3')
+hist(balPol$AGE,main=paste("Histograma",'AGE'),col=a[5],xlab='min: 0    |    median: 25    |    mean: 30.26 \n 1stQ: 0    |    3rdQ: 20    |    max: 148')
+hist(balPol$LOTSZ,main=paste("Histograma",'LOTSZ'),col=a[6],xlab='min: 5.7    |    median: 56.12    |    mean: 70.89 \n 1stQ: 20.69    |    3rdQ: 84    |    max: 400.37')
+par(op)
+dev.off()
+png(paste("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Histogramas/hist","N3",".png"),width = 3000, height = 1000,units="px",res=300)
+op=par(mfrow=c(1,3))
+hist(balPol$SQFT,main=paste("Histograma",'SQFT'),col=a[7],xlab='min: 5.76    |    median: 13.44    |    mean: 16.23 \n 1stQ: 11.02    |    3rdQ: 19.6    |    max: 47.61')
+hist(balPol$DWELL,main=paste("Histograma",'DWELL'),col=a[8],breaks=2,xlab= '1:111\n 0:98')
+hist(balPol$PATIO,main=paste("Histograma",'PATIO'),col=a[1],breaks=2,xlab= '1:29\n 0:180')
+par(op)
+dev.off()
+length(balPol$CITCOU[balPol$CITCOU == 1])
+length(balPol$CITCOU[balPol$CITCOU == 0])
+png(paste("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Histogramas/hist","N4",".png"),width = 3000, height = 1000,units="px",res=300)
+op=par(mfrow=c(1,4))
+hist(balPol$FIREPL,main=paste("Histograma",'FIREPL'),col=a[2],breaks=2,xlab= '1:49\n 0:160')
+hist(balPol$AC,main=paste("Histograma",'AC'),col=a[3],breaks=2,xlab= '1:50\n 0:159')
+hist(balPol$BMENT,main=paste("Histograma",'BMENT'),col=a[4],breaks=2,xlab= '1:180\n 0:29')
+hist(balPol$CITCOU,main=paste("Histograma",'CITCOU'),col=a[5],breaks=2,xlab= '1:126\n 0:83')
+par(op)
+dev.off()
 
 #guarda coeficientes y graficas variables independietnes
 iMoranGlobal<-list()
 bivariadoGlobal<-list()
 correlbiva<-list()
+vars<-c('NROOM','DWELL','NBATH','PATIO','FIREPL','AC','BMENT','NSTOR','GAR','AGE','CITCOU','LOTSZ','SQFT')
+X11()
+png(paste("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Correlograma/corr","N2",".png"),width = 3000, height = 3000,units="px",res=300)
+op=par(mfrow=c(2,2))
 for (i in vars)
 {
   j<-i
   var <- as.data.frame(bal.poly)[j]
   xv <- as.numeric(as.character(unlist(c(var))))
-  x1v<-(xv-mean(xv))/sd(xv)  
+  x1v<-(xv-mean(xv))/sd(xv) 
+
+  moran.cluster(x1, bal.lw, zero.policy = T, bal.poly, significant=T)
   set.seed(123)
   iMoranGlobal[[i]]<-moran.test(x1v, bal.lw, zero.policy=T, alternative="two.sided")
-  bivariadoGlobal[[i]]<-moranbi1.test(x=x1,y=x1v,bal.lw,zero.policy =T,randomisation =T,
-                                      alternative="two.sided",adjust.n=TRUE)
-  
-  png(paste("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Dispersion/disp",i,".png"),
-    width = 2200, height = 1600,units="px",res=300)
+  bivariadoGlobal[[i]]<-moranbi1.test(x=x1,y=x1v,bal.lw,zero.policy =T,randomisation =T,alternative="two.sided",adjust.n=TRUE)
+  # 
+  # png(paste("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Dispersion/disp",i,".png"),
+  #   width = 2200, height = 1600,units="px",res=300)
   moranbi.plot(x1,x1v,quiet =F,zero.policy =T,listw=bal.lw, xlab = "PRICE", ylab = j,main=paste("PRICE_",i))
-  dev.off()
-  png(paste("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Correlograma/correl",i,".png"),
-      width = 2200, height = 1600,units="px",res=300)
-  correlbiva[[i]] <- spcorrelogram.bi(bal.nb.q, x1, x1v, order=9, 
-                                method="I", style="W", zero.policy=T)
+  # dev.off()
+  # png(paste("D:/Documentos/11 semestre/Geoestadística/ProyectoDatosArea/Correlograma/correl",i,".png"),
+  #     width = 2200, height = 1600,units="px",res=300)
+  correlbiva[[i]] <- spcorrelogram.bi(bal.nb, x1, x1v, order=9, method="I", style="W", zero.policy=T)
   plot(correlbiva[[i]],main=paste("PRICE_",i))
-  dev.off()
+  # dev.off()
 }
+par(op)
+dev.off()
 #crear tabla i de moran global
 z<-c()
 p<-c()
@@ -399,6 +449,29 @@ for (i in vars)
 moranglob.df <- data.frame("VAR" = vars, "Z" = z,"P-value"=p,"I de Moran"=I,"E(I)"=E,"V(I)"=V)
 xtable(moranglob.df , digits = 6)
 
+#crear tabla i de moran global
+z<-c()
+p<-c()
+I<-c()
+E<-c()
+V<-c()
+for (i in vars)
+{
+  j<-i
+  var <- as.data.frame(bal.poly)[j]
+  xv <- as.numeric(as.character(unlist(c(var))))
+  x1v<-(xv-mean(xv))/sd(xv)  
+  set.seed(123)
+  z<-c(z,moranbi1.test(x=x1,y=x1v,bal.lw,zero.policy =T,randomisation =T,alternative="two.sided",adjust.n=TRUE)$statistic["Bivariate Moran Z(I) statistic"])
+  p<-c(p,moranbi1.test(x=x1,y=x1v,bal.lw,zero.policy =T,randomisation =T,alternative="two.sided",adjust.n=TRUE)$p.value[1])
+  I<-c(I,moranbi1.test(x=x1,y=x1v,bal.lw,zero.policy =T,randomisation =T,alternative="two.sided",adjust.n=TRUE)$estimate['Bivariate Moran I statistic'])
+  E<-c(E,moranbi1.test(x=x1,y=x1v,bal.lw,zero.policy =T,randomisation =T,alternative="two.sided",adjust.n=TRUE)$estimate["Expectation"])
+  V<-c(V,moranbi1.test(x=x1,y=x1v,bal.lw,zero.policy =T,randomisation =T,alternative="two.sided",adjust.n=TRUE)$estimate["Variance"])
+}
+morangBIglob.df <- data.frame("VAR" = vars, "Z" = z,"P-value"=p,"I de Moran Bivariado"=I,"E(I)"=E,"V(I)"=V)
+xtable(morangBIglob.df , digits = 6)
+
+
 #tablas del bivariado
 table_bivariate <- function(name_0) {
   y0<-c("Z(I)","P-value","I de Moran","E(I)","V(I)")
@@ -411,6 +484,9 @@ table_bivariate <- function(name_0) {
   table.df <- data.frame(y0,y1)
   xtable(data.frame(table.df$y0,table.df$y1), digits = 6)
 }
+moranBIglob.df <- data.frame("VAR" = vars, "Z" = z,"P-value"=p,"I de Moran"=I,"E(I)"=E,"V(I)"=V)
+xtable(moranglob.df , digits = 6)
+
 
 table_bivariate(bivariadoGlobal$DWELL)
 
@@ -420,10 +496,13 @@ table_bivariate(bivariadoGlobal$DWELL)
 iMoranGlobal
 # I Moran bivariado global 
 bivariadoGlobal
+# Getis-Ord global G statistic
+globalG.test(x, listw=bal.lw)   
+
 
 # LISA Cluster Map VARIABLE DEPENDIENTE
 x11()
-moran.cluster(x1, pesosw, zero.policy = T, col.poly, significant=T)
+moran.cluster(x1, bal.lw, zero.policy = T, balPol, significant=T)
 
 # LISA Cluster Map VARIABLE INDEPENDIENTE
 x11()
@@ -436,120 +515,18 @@ moran.cluster(x1.UNEMP, pesosw, zero.policy = T, col.poly, significant=T)
 
 set.seed(123)
 PRICE_LOCAL<-localmoran(x1,bal.lw,zero.policy = T)
-PRICE_LOCAL
+local.df<-as.data.frame(PRICE_LOCAL)
 
+sign<-local.df[['Pr(z > 0)']]< 0.05
+localsign<-local.df[sign,]
+
+length(local.df[['Pr(z > 0)']][local.df[['Pr(z > 0)']] <0.05])
 #G de getis local 
 
-lg<-localG(x1,listw=pesosw,zero.policy = T)
-lg
-
+lg<-localG(x1,listw=bal.lw,zero.policy = T)
+localsign$getis<-c(lg)[sign]
+xtable(localsign$getis)
 ###########################################################
 ###### AUTOCORRELACION BIVARIADA ##################
 ###########################################################
-
-
-
-
-############### MODELOS ###########3
-#PRICE	sales price of house in $1,000 (MLS)
-#NROOM	number of rooms
-#DWELL	1 if detached unit, 0 otherwise
-#NBATH	number of bathrooms
-#PATIO	1 if patio, 0 otherwise
-#FIREPL	1 if fireplace, 0 otherwise
-#AC	1 if air conditioning, 0 otherwise
-#BMENT	1 if basement, 0 otherwise
-#NSTOR	number of stories
-#GAR	number of car spaces in garage (0 = no garage)
-#AGE	age of dwelling in years
-#CITCOU	1 if dwelling is in Baltimore County, 0 otherwise
-#LOTSZ	lot size in hundreds of square feet
-#SQFT	interior living space in hundreds of square feet
-attach(balPol@data)
-mod.lin <- lm(PRICE ~ NROOM+DWELL+NBATH+PATIO+FIREPL+AC+BMENT+NSTOR+GAR+AGE+CITCOU+LOTSZ+SQFT, data = bal.poly@data)
-summary(mod.lin)
-models <- regsubsets(PRICE~., data = balPol@data, nvmax = 13)
-summary(models)
-
-
-lm.morantest(mod.lin, pesosw, alternative = "greater")
-LM_W1 <- lm.LMtests(mod.lin, listw = pesosw, test = "all")
-t(sapply(LM_W1, function(x) unlist(x[1:3])))
-
-
-LMC_AC <- localmoran.bi(PRICE, AC, pesosw, zero.policy =T)
-LMCH <- localmoran.bi(PRICE, AGE, pesosw, zero.policy =T)
-
-
-bal.poly$lm_res <- residuals(mod.lin)
-# Mapa residuales: Opci?n 1
-spplot(bal.poly["lm_res"], col.regions = rev(terrain.colors(20)))
-
-# Mapa residuales: Opci?n 2
-pal2 <- colorRampPalette(c("red3", "wheat1", "blue3"))
-spplot(bal.poly,"lm_res", col.regions = pal2(20))
-
-# Mapa residuales: Opci?n 3
-my.palette <- brewer.pal(n = 9, name = "YlOrRd")
-spplot(bal.poly, "lm_res", col.regions = my.palette, cuts = 8, col = "transparent")
-
-# Mapa residuales: Opci?n 4
-breaks.ci <- classIntervals(bal.poly$lm_res, n = 9, style = "quantile", intervalClosure = "right")$brks
-# se amplian los limites inferior y superior en: .Machine$double.eps*5000000000000,  con el fin que un poligono no quede siempre en blanco.
-breaks.ci[1] <- breaks.ci[1] - .Machine$double.eps*5000000000000
-breaks.ci[length(breaks.ci)] <- breaks.ci[length(breaks.ci)] + .Machine$double.eps*5000000000000
-spplot(bal.poly, "lm_res", col = "transparent", col.regions = my.palette,  at = breaks.ci)
-
-
-# Validaci?n supuestos
-bptest(mod.lin)
-resettest(mod.lin)
-raintest(mod.lin)
-shapiro.test(residuals(mod.lin))
-vif(mod.lin)
-
-
-
-# Modelo Spatial Lag:                                                                   
-col.lag.sm <- lagsarlm(PRICE ~ NROOM+DWELL+NBATH+PATIO+FIREPL+AC+BMENT+NSTOR+GAR+AGE+CITCOU+LOTSZ+SQFT, data=bal.poly@data, listw=pesosw) # CRIME ~1
-summary(col.lag.sm, Nagelkerke=T)
-predict.sarlm(col.lag.sm)
-AIC(col.lag.sm)
-deviance.sarlm(col.lag.sm)
-residuals.sarlm(col.lag.sm)
-coef.sarlm(col.lag.sm)
-fitted.sarlm(col.lag.sm)
-bptest.sarlm(col.lag.sm)
-hetero.plot <- function(model) {
-  plot(residuals(model) ~ fitted(model))
-  abline(h=0, lty="dotted")
-  lines(lowess(fitted(model), residuals(model)), col="red")
-}
-hetero.plot(col.lag.sm)
-
-#Nagelkerke NJD (1991) A note on a general definition of the coefficient of determination. Biometrika 78: 691?C692. 
-NK <- function(obj, y) { 
-  n <- length(obj$residuals) 
-  nullLL <- logLik(lm(y ~ 1)) 
-  c(1 - exp(-(2/n)*(logLik(obj) - nullLL))) 
-} 
-NK(col.lag.sm,PRICE)
-
-#bc <- boxCox(CRIME ~ INC + HOVAL, data = columbus, lambda = seq(-1, 2, length = 20))
-#bc$x[which.max(bc$y)]
-
-# Modelo Spatial Error:
-col.error.sm <- errorsarlm(PRICE ~ NROOM+DWELL+NBATH+PATIO+FIREPL+AC+BMENT+NSTOR+GAR+AGE+CITCOU+LOTSZ+SQFT, data=bal.poly@data, listw=pesosw)
-summary(col.error.sm, Nagelkerke=T)
-NK(col.error.sm,PRICE)
-predict.sarlm(col.error.sm)
-AIC(col.error.sm)
-deviance.sarlm(col.error.sm)
-residuals.sarlm(col.error.sm)
-coef.sarlm(col.error.sm)
-fitted.sarlm(col.error.sm)
-bptest.sarlm(col.error.sm)
-hetero.plot(col.error.sm)
-
-# Comparaci?n
-anova(col.lag.sm,col.error.sm)    
+xtable(localsign) c
