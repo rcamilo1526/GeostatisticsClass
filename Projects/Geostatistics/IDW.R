@@ -9,8 +9,13 @@ library(sp)
 library(geoR)
 library(geospt)
 #data
-load("/home/rcamilo/Documents/geoestadistica/IDSTA.ov.rda")
-load("/home/rcamilo/Documents/geoestadistica/croatia.grilla 25s.2008.rda")
+#pc 0
+#load("/home/rcamilo/Documents/geoestadistica/IDSTA.ov.rda")
+# load("/home/rcamilo/Documents/geoestadistica/croatia.grilla 25s.2008.rda")
+#pc 1
+load("D:/Documentos/11 semestre/Geoestadística/ProyectoGeoestadistica/code/IDSTA.ov.rda")
+load("D:/Documentos/11 semestre/Geoestadística/ProyectoGeoestadistica/code/croatia.grilla 25s.2008.rda")
+
 
 IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
 
@@ -22,8 +27,16 @@ max(Tmt)
 croacia.geoR <- as.geodata(IDSTAr.ov, data.col = 'LST2008_07_03') 
 E<-croacia.geoR$coords[,1]
 N<-croacia.geoR$coords[,2]
-data2<-cbind(N, E, Tmt)
+plot(E,N)
+
+data2<-cbind(E, N, Tmt)
 temp2<-as.data.frame(data2)
+temp2.sp <- SpatialPoints(as.data.frame(temp2)) 
+temp2.spt<-as.data.frame(temp2.sp)
+temp2.spb<-temp2.spt[,1:2]#coordenadas
+temp2.spb$Tmt<-Tmt
+
+IDW <-  temp2.spb
 #IDW
 p.optimo <- function(p, formula, locations, data, newdata, nmax, nmin, maxdist, var.reg){
   idw.pred <- as.data.frame(matrix(NA,nrow= nrow(data), ncol=4))
@@ -38,11 +51,10 @@ coordinates(IDSTA.OV)
 grillabaser<-as.data.frame(IDSTA.OV) #se vuelve data frame
 puntosxyi<-grillabaser[,52:53] #se seleccionan las columnas donde estan las coordenadas x, y
 names(puntosxyi) <- c("N","E") #esta en x, y entonces cambiamos a N y E para ppoder hacer las RBF
-IDW <-  temp2
 
 ###CALCULAR OPTIMO
-P2 <- optimize(p.optimo, c(0,10), formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist=Inf, var.reg=Tmt)
-cat("ParÃ¡metro Ã³ptimo IDW: ", "\n", "P       = ", P2$minimum, "\n", "RMSPE   = ", P2$objective, "\n")
+P <- optimize(p.optimo, c(0,10), formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist=Inf, var.reg=Tmt)
+cat("Parámetro óptimo IDW: ", "\n", "P       = ", P$minimum, "\n", "RMSPE   = ", P$objective, "\n")
 
 P.opt <- optim( par=1 , fn=p.optimo, gr= "Nelder-Mead", method = "Nelder-Mead", formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist=Inf, var.reg=Tmt)
 P.opt <- optim( par=1 , fn=p.optimo, method = "L-BFGS-B", formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist=Inf, var.reg=Tmt)
@@ -55,10 +67,11 @@ p5 <- p.optimo(p=4, formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=1
 p6 <- p.optimo(p=5, formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist=Inf, var.reg=Tmt)
 
 RMSPE <- c(p1, p2, p3, p4, p5, p6)
-plot(c(1,2,P2$minimum,3,4,5),RMSPE, main="GrÃ¡fico de optimizaciÃ³n del ParÃ¡metro (P)\n Distancia Inversa Ponderada", ylab="RMSPE", xlab="p ?ptimo = 1.903656", type="l")
+x11()
+plot(c(1,2,P2$minimum,3,4,5),RMSPE, main="Gráfico de optimización del Parámetro (P)\n Distancia Inversa Ponderada", ylab="RMSPE", xlab="p óptimo = 1.5775117", type="l")
 ####Interpolacion###########
 
-idw.p <- idw(Tmt~1,~ N+E, IDW, puntosxyi, nmax=10, nmin=10, idp=1.577517)
+idw.p <- idw(Tmt~1,~ N+E, IDW, puntosxyi, idp=1.577517)
 grafi<-as.data.frame(idw.p)
 coordinates(grafi) = ~N+E
 gridded(grafi)=T
@@ -66,6 +79,6 @@ gridded(grafi)=T
 min(grafi$var1.pred)
 max(grafi$var1.pred)
 
-
-spplot(grafi ,"var1.pred", main="Interpolaciones de Distancia Inversa\n Ponderada de la PrecipitaciÃ³n\np=1.5775117", col.regions=bpy.colors(101), cuts=100, cex.main=0.5, regions=T, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)",  key.space=list(space="left", cex=0.6))
+x11()
+spplot(grafi ,"var1.pred", main="Interpolaciones de Distancia Inversa\n Ponderada de la Precipitación\np=1.5775117", col.regions=bpy.colors(101), cuts=100, cex.main=0.5, regions=T, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)",  key.space=list(space="left", cex=0.6))
 

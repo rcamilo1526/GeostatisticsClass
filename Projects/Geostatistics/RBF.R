@@ -9,8 +9,13 @@ library(sp)
 library(geoR)
 library(geospt)
 #data
-load("/home/rcamilo/Documents/geoestadistica/IDSTA.ov.rda")
-load("/home/rcamilo/Documents/geoestadistica/croatia.grilla 25s.2008.rda")
+#pc 0
+# load("/home/rcamilo/Documents/geoestadistica/IDSTA.ov.rda")
+# load("/home/rcamilo/Documents/geoestadistica/croatia.grilla 25s.2008.rda")
+#pc 1
+load("D:/Documentos/11 semestre/Geoestadística/ProyectoGeoestadistica/code/IDSTA.ov.rda")
+load("D:/Documentos/11 semestre/Geoestadística/ProyectoGeoestadistica/code/croatia.grilla 25s.2008.rda")
+
 
 IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
 
@@ -18,18 +23,13 @@ IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
 Tmt<-IDSTAr.ov$LST2008_07_03
 min(Tmt)
 max(Tmt)
+na
 #guardar geodata 
 croacia.geoR <- as.geodata(IDSTAr.ov, data.col = 'LST2008_07_03') 
 E<-croacia.geoR$coords[,1]
 N<-croacia.geoR$coords[,2]
-data2<-cbind(N, E, Tmt)
-temp2<-as.data.frame(data2)
-###FUNCIONES DE BASE RADIAL####
-#toda la grilla para predecir sobre esta
-grillabaser<-as.data.frame(IDSTA.OV) #se vuelve data frame
-puntosxyb<-grillabaser[,52:53] #se seleccionan las columnas donde estan las coordenadas x, y
-names(puntosxyb) <- c("N","E") #esta en x, y entonces cambiamos a N y E para ppoder hacer las RBF
-plot(puntosxyb)
+plot(E,N)
+
 
 temp2.spb<-temp2[,1:2]#coordenadas
 # temp2.spb<- puntosxyb
@@ -37,6 +37,22 @@ temp2.spb$Tmt<-Tmt
 length(Tmt)
 coordinates(temp2.spb)
 head(temp2.spb) #estos son mis datos, N, E Y Tmt(temperatura)
+
+
+data2<-cbind(E, N, Tmt)
+temp2<-as.data.frame(data2)
+temp2.sp <- SpatialPoints(as.data.frame(temp2)) 
+temp2.spt<-as.data.frame(temp2.sp)
+temp2.spb<-temp2.spt[,1:2]#coordenadas
+temp2.spb$Tmt<-Tmt
+
+###FUNCIONES DE BASE RADIAL####
+#toda la grilla para predecir sobre esta
+grillabaser<-as.data.frame(IDSTA.OV) #se vuelve data frame
+puntosxyb<-grillabaser[,52:53] #se seleccionan las columnas donde estan las coordenadas x, y
+names(puntosxyb) <- c("N","E") #esta en x, y entonces cambiamos a N y E para ppoder hacer las RBF
+plot(puntosxyb)
+
 
 #Hacemos la optimzacion para cada una de RBF
 
@@ -93,12 +109,13 @@ puntosxyb$pred <- pred.rbf.st$var1.pred
 grafb<-as.data.frame(puntosxyb)
 coordinates(grafb) = ~N+E
 gridded(grafb)=T
-
-spplot(grafb ,"pred", main="Temperatura media 3 de julio de 2008 Predicciones \nSpline with Tension", col.regions=bpy.colors(101), cuts=100, cex.main=0.5, regions=T, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)",  key.space=list(space="left", cex=0.6))
+x11()
+spplot(grafb ,"pred", main="Temperatura media 3 de julio de 2008 Predicciones \nSpline completamente regularizada", col.regions=bpy.colors(150), cuts=150, cex.main=0.5, regions=T, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)",  key.space=list(space="left", cex=0.6))
 
 plot(croacia.geoR)
 
-min(pred.rbf.st$var1.pred)
-max(pred.rbf.st$var1.pred)
+min(pred.rbf.st$var1.pred)#24.06542
+max(pred.rbf.st$var1.pred)#34.512
 
-    
+min(Tmt)
+max(Tmt)
