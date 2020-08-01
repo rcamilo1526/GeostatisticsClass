@@ -29,13 +29,20 @@ E<-croacia.geoR$coords[,1]
 N<-croacia.geoR$coords[,2]
 plot(E,N)
 
+temp2.spb<-temp2[,1:2]#coordenadas
+# temp2.spb<- puntosxyb
+temp2.spb$Tmt<-Tmt
+length(Tmt)
+coordinates(temp2.spb)
+head(temp2.spb) #estos son mis datos, N, E Y Tmt(temperatura)
+
 data2<-cbind(E, N, Tmt)
 temp2<-as.data.frame(data2)
 temp2.sp <- SpatialPoints(as.data.frame(temp2)) 
 temp2.spt<-as.data.frame(temp2.sp)
 temp2.spb<-temp2.spt[,1:2]#coordenadas
 temp2.spb$Tmt<-Tmt
-
+plot(temp2)
 IDW <-  temp2.spb
 #IDW
 p.optimo <- function(p, formula, locations, data, newdata, nmax, nmin, maxdist, var.reg){
@@ -50,7 +57,7 @@ p.optimo <- function(p, formula, locations, data, newdata, nmax, nmin, maxdist, 
 coordinates(IDSTA.OV)
 grillabaser<-as.data.frame(IDSTA.OV) #se vuelve data frame
 puntosxyi<-grillabaser[,52:53] #se seleccionan las columnas donde estan las coordenadas x, y
-names(puntosxyi) <- c("N","E") #esta en x, y entonces cambiamos a N y E para ppoder hacer las RBF
+names(puntosxyi) <- c("E","N") #esta en x, y entonces cambiamos a N y E para ppoder hacer las RBF
 
 ###CALCULAR OPTIMO
 P <- optimize(p.optimo, c(0,10), formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist=Inf, var.reg=Tmt)
@@ -61,19 +68,19 @@ P.opt <- optim( par=1 , fn=p.optimo, method = "L-BFGS-B", formula=Tmt~1, locatio
 
 p1 <- p.optimo(p=1, formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist= Inf, var.reg=Tmt)
 p2 <- p.optimo(p=2, formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist=Inf, var.reg=Tmt)
-p3 <- P2$objective
+p3 <- P$objective
 p4 <- p.optimo(p=3, formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist=Inf, var.reg=Tmt)
 p5 <- p.optimo(p=4, formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist=Inf, var.reg=Tmt)
 p6 <- p.optimo(p=5, formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist=Inf, var.reg=Tmt)
 
 RMSPE <- c(p1, p2, p3, p4, p5, p6)
 x11()
-plot(c(1,2,P2$minimum,3,4,5),RMSPE, main="Gráfico de optimización del Parámetro (P)\n Distancia Inversa Ponderada", ylab="RMSPE", xlab="p óptimo = 1.5775117", type="l")
+plot(c(1,2,P$minimum,3,4,5),RMSPE, main="Gráfico de optimización del Parámetro (P)\n Distancia Inversa Ponderada", ylab="RMSPE", xlab="p óptimo = 1.5775117", type="l")
 ####Interpolacion###########
 
 idw.p <- idw(Tmt~1,~ N+E, IDW, puntosxyi, idp=1.577517)
 grafi<-as.data.frame(idw.p)
-coordinates(grafi) = ~N+E
+coordinates(grafi) = ~E+N
 gridded(grafi)=T
 
 min(grafi$var1.pred)

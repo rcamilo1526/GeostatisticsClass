@@ -9,8 +9,13 @@ library(sp)
 library(geoR)
 library(geospt)
 #data
-load("/home/rcamilo/Documents/geoestadistica/IDSTA.ov.rda")
-load("/home/rcamilo/Documents/geoestadistica/croatia.grilla 25s.2008.rda")
+#pc 0
+#load("/home/rcamilo/Documents/geoestadistica/IDSTA.ov.rda")
+# load("/home/rcamilo/Documents/geoestadistica/croatia.grilla 25s.2008.rda")
+#pc 1
+load("D:/Documentos/11 semestre/Geoestadística/ProyectoGeoestadistica/code/IDSTA.ov.rda")
+load("D:/Documentos/11 semestre/Geoestadística/ProyectoGeoestadistica/code/croatia.grilla 25s.2008.rda")
+
 
 IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
 
@@ -40,6 +45,7 @@ mdb.rgdb = db.create(mdb,ndim=2,autoname=F)
 mdb.herm = anam.fit(mdb.rgdb,name="Tmt",type="gaus")
 mdb.hermtrans = anam.z2y(mdb.rgdb,names="Tmt",anam=mdb.herm)
 Tmt.trans = mdb.hermtrans@items$Gaussian.Tmt 
+
 
 
 data2<-cbind(N, E, Tmt.trans)
