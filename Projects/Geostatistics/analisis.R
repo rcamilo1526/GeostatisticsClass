@@ -26,6 +26,9 @@ IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
   Lon<-IDSTAr.ov$Lon
   #temperatura 
     Tmt<-IDSTAr.ov$LST2008_07_03
+    # library(stargazer)
+    # 
+    # stargazer(data.frame(Hrdem=Hrdem,Hrdsea=Hrdsea,Hrtwi=Hrtwi,Tmt=Tmt,N=N,E=E))
     
 #guardar geodata 
   croacia.geoR <- as.geodata(IDSTAr.ov, data.col = 'LST2008_07_03') 
@@ -94,12 +97,15 @@ IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
   summary(modelo1)
   step.model <- stepAIC(modelo1, direction = "both", trace = FALSE)
   summary(step.model)
+  
   library(stargazer)
   stargazer(modelo1,step.model,single.row = T)
-  # residuals(step.model)
-  #Hay tendencia, se toman los residuos
+  shapiro.test(residuals(step.model))
+  ks.test(as.numeric(scale(sort(residuals(step.model)))),pnorm)
+  #No hay tendencia, se toma la transformada
     tp.geo <- croacia.geoR
-    tp.geo$data <- residuals(step.model)
+    tp.geo$data<-Tmt.trans
+    # tp.geo$data <- residuals(step.model)
 
     #comprobrando el grado de tendencia presente en el modelo 
     modelot2<-lm(Tmt.trans~Hrdem+Hrdsea+Hrtwi+N+E+N^2+E^2+N*E+Hrdem*N+Hrdsea*N+Hrtwi*N+Hrdem*E+Hrdsea*E+Hrtwi*E+Hrdem*E^2+Hrdsea*E^2+Hrtwi*E^2+Hrdem*N^2+Hrdsea*N^2+Hrtwi*N^2)
@@ -144,7 +150,7 @@ IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
   data.geo$value=data.geo$Tmt.trans
   estimateAnisotropy(data.geo) 
   #SIN ANISOTROPIA
-  dmax<-max(dist(tp.geo$coords))/2
+  dmax<-max(dist(croacia.geoR$coords))/2
   var.an <- variog4(tp.geo, max.dist=dmax)
   x11()
   plot(var.an) 
@@ -353,6 +359,7 @@ IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
   par(op)
   
   #TEORICO
+  
   data2<-cbind(N, E, Tmt.trans)
   temp2<-as.data.frame(data2)
   newgeodata<-as.geodata(temp2)
@@ -377,7 +384,7 @@ IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
     pow.ml.c$AIC
   )
 
-
+  x11()
   plot(v$bins, v$classic,col=1,ylim=c(0,3), main="Modelo experimental clásico", ylab="Semivarianza", xlab="Distancia", pch=19)
   lines(exp.ml.c,max.dist=dmax,lwd=2,col='blue')
   lines(sph.ml.c,max.dist=dmax,lwd=2,col='green')
@@ -407,7 +414,7 @@ IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
     pow.ml.r$AIC
   )
   
-  
+  x11()
   plot(v$bins, v$robust,col=1,ylim=c(0,3), main="Modelo experimental robusto", ylab="Semivarianza", xlab="Distancia", pch=19)
   lines(exp.ml.r,max.dist=dmax,lwd=2,col='blue')
   lines(sph.ml.r,max.dist=dmax,lwd=2,col='green')
@@ -435,7 +442,7 @@ IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
     pow.ml.m$AIC
   )
   
-  
+  x11()
   plot(v$bins, v$med,col=1,ylim=c(0,3), main="Modelo experimental mediana", ylab="Semivarianza", xlab="Distancia", pch=19)
   lines(exp.ml.m,max.dist=dmax,lwd=2,col='blue')
   lines(sph.ml.m,max.dist=dmax,lwd=2,col='green')
@@ -464,7 +471,7 @@ IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
     pow.ml.t$AIC
   )
   
-  
+  x11()
   plot(v$bins, v$trimmed.mean,col=1,ylim=c(0,3), main="Modelo experimental median recortada", ylab="Semivarianza", xlab="Distancia", pch=19)
   lines(exp.ml.t,max.dist=dmax,lwd=2,col='blue')
   lines(sph.ml.t,max.dist=dmax,lwd=2,col='green')
@@ -473,8 +480,8 @@ IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
   lines(pow.ml.t,max.dist=dmax,lwd=2,col='orange')
   legend(locator(1), legend=c('Exponencial','Esférico','Matern','Cir','Pow'),lwd=c(2,2,2,2),col=c('blue','green','yellow','red','orange'))
   
-
-  data.frame(sv.clas,sv.robust,sv.med,sv.trimmed.mean)
+  library(xtable)
+  xtable(data.frame(sv.clas,sv.robust,sv.med,sv.trimmed.mean))
   #se corre el modelo escog?do con ML WLS, RML
   # clasico nugget = 0.01,  ini = c(0.8,22000)
   variogramaclasico<-variog( newgeodata,max.dist=dmax, option = "cloud")
@@ -484,7 +491,8 @@ IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
   exp.rml$AIC
   exp.ml$AIC
   exp.wls$AIC
-  plot(v$bins, v$robust, pch=19, xlab="Distancia", ylab="Semivarianza",ylim=c(0,3))
+  X11()
+  plot(v$bins, v$classic, pch=19, xlab="Distancia", ylab="Semivarianza",main= "Modelo experimental Clásico",ylim=c(0,3))
   lines(exp.ml,max.dist=dmax,lwd=2, col='red')
   lines(exp.rml,max.dist=dmax,lwd=2,col='blue')
   lines(exp.wls,max.dist=dmax,lwd=2,col='green')

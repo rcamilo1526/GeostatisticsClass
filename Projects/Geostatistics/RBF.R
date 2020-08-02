@@ -50,7 +50,8 @@ temp2.spb$Tmt<-Tmt
 #toda la grilla para predecir sobre esta
 grillabaser<-as.data.frame(IDSTA.OV) #se vuelve data frame
 puntosxyb<-grillabaser[,52:53] #se seleccionan las columnas donde estan las coordenadas x, y
-names(puntosxyb) <- c("N","E") #esta en x, y entonces cambiamos a N y E para ppoder hacer las RBF
+names(puntosxyb) <- c("E","N")#esta en x, y entonces cambiamos a N y E para ppoder hacer las RBF
+coordinates(puntosxyb)=~E+N
 plot(puntosxyb)
 
 
@@ -107,15 +108,15 @@ pred.rbf.st<-rbf(Tmt~1, data=as.data.frame( temp2.spb) , eta=0.0003768368,rho=0.
 # muestra el mapa de prediccion con la rbf Spline completamente regularizada
 puntosxyb$pred <- pred.rbf.st$var1.pred
 grafb<-as.data.frame(puntosxyb)
-coordinates(grafb) = ~N+E
+coordinates(grafb) = ~E+N
 gridded(grafb)=T
 x11()
-spplot(grafb ,"pred", main="Temperatura media 3 de julio de 2008 Predicciones \nSpline completamente regularizada", col.regions=bpy.colors(150), cuts=150, cex.main=0.5, regions=T, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)",  key.space=list(space="left", cex=0.6))
+spplot(grafb ,"pred", main="Temperatura media 3 de julio de 2008 Predicciones \nSpline completamente regularizada", col.regions=bpy.colors(101), cuts=100, cex.main=0.5, regions=T, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)",  key.space=list(space="left", cex=0.6))
 
 plot(croacia.geoR)
 
 min(pred.rbf.st$var1.pred)#24.06542
-max(pred.rbf.st$var1.pred)#34.512
-
+max(pred.rbf.st$var1.pred)#34.51251
+mean(pred.rbf.st$var1.pred)#29.39422
 min(Tmt)
 max(Tmt)

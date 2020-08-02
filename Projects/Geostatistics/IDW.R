@@ -18,7 +18,6 @@ load("D:/Documentos/11 semestre/Geoestadística/ProyectoGeoestadistica/code/croat
 
 
 IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
-
 #temperatura 
 Tmt<-IDSTAr.ov$LST2008_07_03
 min(Tmt)
@@ -75,17 +74,16 @@ p6 <- p.optimo(p=5, formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=1
 
 RMSPE <- c(p1, p2, p3, p4, p5, p6)
 x11()
-plot(c(1,2,P$minimum,3,4,5),RMSPE, main="Gráfico de optimización del Parámetro (P)\n Distancia Inversa Ponderada", ylab="RMSPE", xlab="p óptimo = 1.5775117", type="l")
+plot(c(1,2,P$minimum,3,4,5),RMSPE, main="Gráfico de optimización del Parámetro (P)\n Distancia Inversa Ponderada", ylab="RMSPE", xlab="p óptimo = 1.5775117", type="l",color='red')
 ####Interpolacion###########
 
 idw.p <- idw(Tmt~1,~ N+E, IDW, puntosxyi, idp=1.577517)
 grafi<-as.data.frame(idw.p)
 coordinates(grafi) = ~E+N
 gridded(grafi)=T
-
-min(grafi$var1.pred)
-max(grafi$var1.pred)
-
+min(grafi$var1.pred)#21.2182
+max(grafi$var1.pred)#36.53699
+mean(grafi$var1.pred)#29.28603
 x11()
-spplot(grafi ,"var1.pred", main="Interpolaciones de Distancia Inversa\n Ponderada de la Precipitación\np=1.5775117", col.regions=bpy.colors(101), cuts=100, cex.main=0.5, regions=T, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)",  key.space=list(space="left", cex=0.6))
+spplot(grafi ,"var1.pred", main="Interpolaciones de Distancia Inversa\n Ponderada de la Precipitación\np=1.5775117", col.regions=bpy.colors(150), cuts=150, cex.main=0.5, regions=T, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)",  key.space=list(space="left", cex=0.6))
 
