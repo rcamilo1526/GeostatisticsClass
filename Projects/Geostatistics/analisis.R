@@ -18,8 +18,6 @@ load("D:/Documentos/11 semestre/Geoestadística/ProyectoGeoestadistica/code/croat
  
 IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
 
-options(max.print = 30)
-
 #guardar de la base 
   Hrdem<-IDSTAr.ov$HRdem
   Hrdsea<-IDSTAr.ov$HRdsea
@@ -157,10 +155,13 @@ options(max.print = 30)
   library(geoR)
   library(sgeostat)
   library(geospt)
+  dmax<-max(dist(croacia.geoR$coords))/2
   
+  ############Con tendencia#########
   
 
   #EXPERIMENTALES
+  
   data2.geo<-as.data.frame(tp.geo)
   class(data2.geo) <- c("data.frame")
   data.or<-data2.geo[,c(2,1,3)]
@@ -360,12 +361,12 @@ options(max.print = 30)
   ##################################################################
   ###################    CLASICO   #################################
   #################################################################
-  #beta es c1 init[0], sigma es c0 nugget y phi es a init[1]5.5,"Exp",20000, 0
-  exp.ml.c<-likfit(geodata = newgeodata ,nugget = 0.02,  ini = c(1.6,48000),fix.nugget = T)
-  sph.ml.c<-likfit(geodata = newgeodata, nugget = 0.02, ini = c(1.2,78000),cov.model="sph",fix.nugget = T)
-  mat.ml.c<-likfit(geodata = newgeodata,nugget = 0.62, ini = c(1.2,68000),cov.model="mat",kappa=1.5,fix.nugget = T)
-  cir.ml.c<-likfit(geodata = newgeodata, nugget = 0.002,ini = c(1.2,62800),cov.model="cir",fix.nugget = T)
-  pow.ml.c<-likfit(geodata = newgeodata,nugget = 0.15, ini = c(1.4,48000),cov.model="powered.exponential",kappa=1.75,fix.nugget = T)
+  #beta es c1 init[0], sigma es c0 nugget y phi es a init[1]5.5,"Exp",20000, 0nugget = 0.02,  ini = c(1.6,42000)
+  exp.ml.c<-likfit(geodata = newgeodata ,nugget = 0.02,  ini = c(1.6,42000),fix.nugget = T)
+  sph.ml.c<-likfit(geodata = newgeodata, nugget = 0.02, ini = c(1.2,65000),cov.model="sph",fix.nugget = T)
+  mat.ml.c<-likfit(geodata = newgeodata,nugget = 0.3, ini = c(2,64000),cov.model="mat",kappa=1.5,fix.nugget = T)
+  cir.ml.c<-likfit(geodata = newgeodata, nugget = 0.002,ini = c(1.2,52000),cov.model="cir",fix.nugget = T)
+  pow.ml.c<-likfit(geodata = newgeodata,nugget = 0.1319,ini = c(0.09310,27500),cov.model="powered.exponential",kappa=1.75,fix.nugget = T)
   summary(exp.ml.c)
   #Aic para todos los variogramas anteriores
   sv.clas<-c(
@@ -378,51 +379,55 @@ options(max.print = 30)
 
 
   plot(v$bins, v$classic,col=1,ylim=c(0,3), main="Modelo experimental clásico", ylab="Semivarianza", xlab="Distancia", pch=19)
-  lines(exp.ml.c,max.dist=dmax,lwd=2,col='red')
-  lines(sph.ml.c,max.dist=dmax,lwd=2,col='blue')
-  lines(mat.ml.c,max.dist=dmax,lwd=2,col='green')
-  lines(cir.ml.c,max.dist=dmax,lwd=2,col='yellow')
+  lines(exp.ml.c,max.dist=dmax,lwd=2,col='blue')
+  lines(sph.ml.c,max.dist=dmax,lwd=2,col='green')
+  lines(mat.ml.c,max.dist=dmax,lwd=2,col='yellow')
+  lines(cir.ml.c,max.dist=dmax,lwd=2,col='red')
   lines(pow.ml.c,max.dist=dmax,lwd=2,col='orange')
-  legend(locator(1), legend=c('Exponencial','Esférico','Matern','Cir','Pow'),lwd=c(2,2,2,2),col=c('red','blue','green','yellow','orange'))
+  legend(locator(1), legend=c('Exponencial','Esférico','Matern','Cir','Pow'),lwd=c(2,2,2,2),col=c('blue','green','yellow','red','orange'))
   
   
   #######################################################
   ################### ROBUSTO ##########################
   ######################################################
   
-  exp.ml.r<-likfit(geodata = newgeodata , nugget = 0.01,  ini = c(0.8,26000),fix.nugget = T)
-  sph.ml.r<-likfit(geodata = newgeodata, nugget = 0.01, ini = c(0.6,35000),cov.model="sph",fix.nugget = T)
-  mat.ml.r<-likfit(geodata = newgeodata,nugget = 0.28, ini = c(0.6,35000),cov.model="mat",kappa=1.5,fix.nugget = T)
-  cir.ml.r<-likfit(geodata = newgeodata, nugget = 0.001,ini = c(0.6,30900),cov.model="cir",fix.nugget = T)
-  pow.ml.r<-likfit(geodata = newgeodata,nugget = 0.15, ini = c(0.7,25000),cov.model="powered.exponential",kappa=1.75,fix.nugget = T)
-  
+  #beta es c1 init[0], sigma es c0 nugget y phi es a init[1]5.5,"Exp",20000, 0
+  exp.ml.r<-likfit(geodata = newgeodata ,nugget = 0.02,  ini = c(1.6,46000),fix.nugget = T)
+  sph.ml.r<-likfit(geodata = newgeodata, nugget = 0.02, ini = c(1.2,62000),cov.model="sph",fix.nugget = T)
+  mat.ml.r<-likfit(geodata = newgeodata,nugget = 0.25, ini = c(5,54000),cov.model="mat",kappa=1.5,fix.nugget = T)
+  cir.ml.r<-likfit(geodata = newgeodata, nugget = 0.002,ini = c(1.2,48000),cov.model="cir",fix.nugget = T)
+  pow.ml.r<-likfit(geodata = newgeodata,nugget = 0.1295,ini = c(0.09330,27500),cov.model="powered.exponential",kappa=1.75,fix.nugget = T)
+  summary(exp.ml.c)
   #Aic para todos los variogramas anteriores
-  sv.rob<-c(exp.ml.r$AIC,
-            sph.ml.r$AIC,
-            mat.ml.r$AIC,
-            cir.ml.r$AIC,
-            pow.ml.r$AIC)
+  sv.robust<-c(
+    exp.ml.r$AIC,
+    sph.ml.r$AIC,
+    mat.ml.r$AIC,
+    cir.ml.r$AIC,
+    pow.ml.r$AIC
+  )
   
   
-  plot(v$bins, v$robust,col=1, main="Modelo experimental robusto", ylab="Semivarianza", xlab="Distancia", pch=19)
-  lines(exp.ml.r,max.dist=dmax,lwd=2,col='red')
-  lines(sph.ml.r,max.dist=dmax,lwd=2,col='blue')
-  lines(mat.ml.r,max.dist=dmax,lwd=2,col='green')
-  lines(cir.ml.r,max.dist=dmax,lwd=2,col='yellow')
+  plot(v$bins, v$robust,col=1,ylim=c(0,3), main="Modelo experimental robusto", ylab="Semivarianza", xlab="Distancia", pch=19)
+  lines(exp.ml.r,max.dist=dmax,lwd=2,col='blue')
+  lines(sph.ml.r,max.dist=dmax,lwd=2,col='green')
+  lines(mat.ml.r,max.dist=dmax,lwd=2,col='yellow')
+  lines(cir.ml.r,max.dist=dmax,lwd=2,col='red')
   lines(pow.ml.r,max.dist=dmax,lwd=2,col='orange')
-  legend(locator(1), legend=c('Exponencial','Esférico','Matern','Cir','Pow'),lwd=c(2,2,2,2),col=c('red','blue','green','yellow','orange'))
+  legend(locator(1), legend=c('Exponencial','Esférico','Matern','Cir','Pow'),lwd=c(2,2,2,2),col=c('blue','green','yellow','red','orange'))
   
   ##########################################################################
   ###################### MEDIANA###################################
   ##################################################################
-  exp.ml.m<-likfit(geodata = newgeodata ,  nugget = 0.01,  ini = c(0.8,24000),fix.nugget = T)
-  sph.ml.m<-likfit(geodata = newgeodata, nugget = 0.01, ini = c(0.6,35000),cov.model="sph",fix.nugget = T)
-  mat.ml.m<-likfit(geodata = newgeodata,nugget = 0.26, ini = c(0.6,35000),cov.model="mat",kappa=1.5,fix.nugget = T)
-  cir.ml.m<-likfit(geodata = newgeodata, nugget = 0.001,ini = c(0.6,31100),cov.model="cir",fix.nugget = T)
-  pow.ml.m<-likfit(geodata = newgeodata,nugget = 0.155, ini = c(0.7,24000),cov.model="powered.exponential",kappa=1.75,fix.nugget = T)
-  
+  #beta es c1 init[0], sigma es c0 nugget y phi es a init[1]5.5,"Exp",20000, 0
+  exp.ml.m<-likfit(geodata = newgeodata ,nugget = 0.02,  ini = c(1.6,44000),fix.nugget = T)
+  sph.ml.m<-likfit(geodata = newgeodata, nugget = 0.021, ini = c(1.2,61000),cov.model="sph",fix.nugget = T)
+  mat.ml.m<-likfit(geodata = newgeodata,nugget = 0.3, ini = c(2,62000),cov.model="mat",kappa=1.5,fix.nugget = T)
+  cir.ml.m<-likfit(geodata = newgeodata, nugget = 0.002,ini = c(1.2,47500),cov.model="cir",fix.nugget = T)
+  pow.ml.m<-likfit(geodata = newgeodata,nugget = 0.1291,ini = c(0.09310,27500),cov.model="powered.exponential",kappa=1.75,fix.nugget = T)
+  summary(exp.ml.c)
   #Aic para todos los variogramas anteriores
-  sv.median<-c(
+  sv.med<-c(
     exp.ml.m$AIC,
     sph.ml.m$AIC,
     mat.ml.m$AIC,
@@ -431,54 +436,64 @@ options(max.print = 30)
   )
   
   
-  plot(v$bins, v$med,col=1, main="Modelo experimental mediana", ylab="Semivarianza", xlab="Distancia", pch=19)
-  lines(exp.ml.m,max.dist=dmax,lwd=2,col='red')
-  lines(sph.ml.m,max.dist=dmax,lwd=2,col='blue')
-  lines(mat.ml.m,max.dist=dmax,lwd=2,col='green')
-  lines(cir.ml.m,max.dist=dmax,lwd=2,col='yellow')
+  plot(v$bins, v$med,col=1,ylim=c(0,3), main="Modelo experimental mediana", ylab="Semivarianza", xlab="Distancia", pch=19)
+  lines(exp.ml.m,max.dist=dmax,lwd=2,col='blue')
+  lines(sph.ml.m,max.dist=dmax,lwd=2,col='green')
+  lines(mat.ml.m,max.dist=dmax,lwd=2,col='yellow')
+  lines(cir.ml.m,max.dist=dmax,lwd=2,col='red')
   lines(pow.ml.m,max.dist=dmax,lwd=2,col='orange')
-  legend(locator(1), legend=c('Exponencial','Esférico','Matern','Cir','Pow'),lwd=c(2,2,2,2),col=c('red','blue','green','yellow','orange'))
-  
+  legend(locator(1), legend=c('Exponencial','Esférico','Matern','Cir','Pow'),lwd=c(2,2,2,2),col=c('blue','green','yellow','red','orange'))
   
   ##########################################################################
   ###################### MEDIA RECORTADA ###################################
   ##################################################################
   
-  exp.ml.mr<-likfit(geodata = newgeodata , nugget = 0.01,  ini = c(0.8,22000),fix.nugget = T)
-  sph.ml.mr<-likfit(geodata = newgeodata, nugget = 0.01, ini = c(0.6,39000),cov.model="sph",fix.nugget = T)
-  mat.ml.mr<-likfit(geodata = newgeodata,nugget = 0.27, ini = c(0.6,34000),cov.model="mat",kappa=1.5,fix.nugget = T)
-  cir.ml.mr<-likfit(geodata = newgeodata, nugget = 0.001,ini = c(0.6,31400),cov.model="cir",fix.nugget = T)
-  pow.ml.mr<-likfit(geodata = newgeodata,nugget = 0.153, ini = c(0.7,24000),cov.model="powered.exponential",kappa=1.75,fix.nugget = T)
-  
+  #beta es c1 init[0], sigma es c0 nugget y phi es a init[1]5.5,"Exp",20000, 0
+  exp.ml.t<-likfit(geodata = newgeodata ,nugget = 0.02,  ini = c(1.6,48000),fix.nugget = T)
+  sph.ml.t<-likfit(geodata = newgeodata, nugget = 0.02, ini = c(1.2,64000),cov.model="sph",fix.nugget = T)
+  mat.ml.t<-likfit(geodata = newgeodata,nugget = 0.31, ini = c(0.197,61000),cov.model="mat",kappa=1.5,fix.nugget = T)
+  cir.ml.t<-likfit(geodata = newgeodata, nugget = 0.0021,ini = c(1.2,46900),cov.model="cir",fix.nugget = T)
+  pow.ml.t<-likfit(geodata = newgeodata,nugget = 0.1269,ini = c(0.09310,27500),cov.model="powered.exponential",kappa=1.75,fix.nugget = T)
+  summary(exp.ml.c)
   #Aic para todos los variogramas anteriores
-  sv.medrec<-c(
-    exp.ml.mr$AIC,
-    sph.ml.mr$AIC,
-    mat.ml.mr$AIC,
-    cir.ml.mr$AIC,
-    pow.ml.mr$AIC
+  sv.trimmed.mean<-c(
+    exp.ml.t$AIC,
+    sph.ml.t$AIC,
+    mat.ml.t$AIC,
+    cir.ml.t$AIC,
+    pow.ml.t$AIC
   )
   
-  plot(v$bins, v$med,col=1, main="Modelo experimental media recortada", ylab="Semivarianza", xlab="Distancia", pch=19)
-  lines(exp.ml.mr,max.dist=dmax,lwd=2,col='red')
-  lines(sph.ml.mr,max.dist=dmax,lwd=2,col='blue')
-  lines(mat.ml.mr,max.dist=dmax,lwd=2,col='green')
-  lines(cir.ml.mr,max.dist=dmax,lwd=2,col='yellow')
-  lines(pow.ml.mr,max.dist=dmax,lwd=2,col='orange')
-  legend(locator(1), legend=c('Exponencial','Esférico','Matern','Cir','Pow'),lwd=c(2,2,2,2),col=c('red','blue','green','yellow','orange'))
   
+  plot(v$bins, v$trimmed.mean,col=1,ylim=c(0,3), main="Modelo experimental median recortada", ylab="Semivarianza", xlab="Distancia", pch=19)
+  lines(exp.ml.t,max.dist=dmax,lwd=2,col='blue')
+  lines(sph.ml.t,max.dist=dmax,lwd=2,col='green')
+  lines(mat.ml.t,max.dist=dmax,lwd=2,col='yellow')
+  lines(cir.ml.t,max.dist=dmax,lwd=2,col='red')
+  lines(pow.ml.t,max.dist=dmax,lwd=2,col='orange')
+  legend(locator(1), legend=c('Exponencial','Esférico','Matern','Cir','Pow'),lwd=c(2,2,2,2),col=c('blue','green','yellow','red','orange'))
   
-  data.frame(sv.clas,sv.rob,sv.median,sv.medrec)
+
+  data.frame(sv.clas,sv.robust,sv.med,sv.trimmed.mean)
   #se corre el modelo escog?do con ML WLS, RML
   # clasico nugget = 0.01,  ini = c(0.8,22000)
   variogramaclasico<-variog( newgeodata,max.dist=dmax, option = "cloud")
-  exp.ml<-likfit(geodata = newgeodata , nugget = 0.01,  ini = c(0.8,23000),fix.nugget = T)
-  exp.rml<-likfit(geodata = newgeodata , nugget = 0.01,  ini = c(0.8,22000),fix.nugget = T,method='RML')
-  exp.wls<-variofit(vario = variogramaclasico, nugget = 0.1,  ini = c(1.25,22000),fix.nugget = T,weights="npairs")
-  
-  plot(v$bins, v$robust, pch=19, xlab="Distancia", ylab="Semivarianza")
+  exp.ml<-likfit(geodata = newgeodata , nugget = 0.02,  ini = c(1.6,45000),fix.nugget = T)
+  exp.rml<-likfit(geodata = newgeodata , nugget = 0.02,  ini = c(1.6,42000),fix.nugget = T,method='RML')
+  exp.wls<-variofit(vario = variogramaclasico, nugget = 0.02,  ini = c(2.1,32000),fix.nugget = T,weights="npairs",cov.model = 'exp')
+  exp.rml$AIC
+  exp.ml$AIC
+  exp.wls$AIC
+  plot(v$bins, v$robust, pch=19, xlab="Distancia", ylab="Semivarianza",ylim=c(0,3))
   lines(exp.ml,max.dist=dmax,lwd=2, col='red')
   lines(exp.rml,max.dist=dmax,lwd=2,col='blue')
   lines(exp.wls,max.dist=dmax,lwd=2,col='green')
   legend(locator(1),legend=c('ML','RML','WLS'),lwd=c(2,2,2),col=c('red','blue','green'))
-
+  
+  
+  
+  
+  
+  
+  #############################################33
+  

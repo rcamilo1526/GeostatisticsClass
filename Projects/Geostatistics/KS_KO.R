@@ -29,102 +29,92 @@ E<-croacia.geoR$coords[,1]
 N<-croacia.geoR$coords[,2]
 plot(E,N)
 
-temp2.spb<-temp2[,1:2]#coordenadas
-# temp2.spb<- puntosxyb
-temp2.spb$Tmt<-Tmt
-length(Tmt)
-coordinates(temp2.spb)
-head(temp2.spb) #estos son mis datos, N, E Y Tmt(temperatura)
+#no normalidad  entonces anamorfosis gaussiana
+library(RGeostats)
+library(gstat)
+data<-cbind(N, E, Tmt)
+temp<-as.data.frame(data)
+#01. Fit Gaussian Anamorphosis 
+mdb = temp[,c("N","E","Tmt")] #must be 3 columns: x,y,z
+mdb.rgdb = db.create(mdb,ndim=2,autoname=F)
+mdb.herm = anam.fit(mdb.rgdb,name="Tmt",type="gaus")
+mdb.hermtrans = anam.z2y(mdb.rgdb,names="Tmt",anam=mdb.herm)
+Tmt.trans = mdb.hermtrans@items$Gaussian.Tmt 
 
-data2<-cbind(E, N, Tmt)
-temp2<-as.data.frame(data2)
-temp2.sp <- SpatialPoints(as.data.frame(temp2)) 
-temp2.spt<-as.data.frame(temp2.sp)
-temp2.spb<-temp2.spt[,1:2]#coordenadas
-temp2.spb$Tmt<-Tmt
-plot(temp2)temp2.sp <- SpatialPoints(as.data.frame(temp2)) 
-umtna<-"+NA"
-proj4string(temp2.sp) <- CRS(umtna)
 
-#################################
-######## KRIGING ORDINARIO#######
-#################################
+library(gstat)
+library(sp)
+data2<-cbind(E, N, Tmt.trans)
+mu<-mean(Tmt.trans)
+temp2s<-as.data.frame(data2)
+coordinates(temp2s) = ~E+N
+grillabaser<-as.data.frame(IDSTA.OV) #se vuelve data frame
+borde<-grillabaser[,52:53]
+names(borde) <- c("E","N")
+coordinates(borde) = ~E+N
+m = vgm(0.6,"Exp",35000, 0.4)
+detach("package:sgeostat")
+ 
 
-#02. Variogram fit to gaussian transformed data using gstat 
-zn.svgm <- variogram(Tmt.trans~1,temp2.sp)
-vgm1 = vgm(0.544,"Exp",19000, 0.01)
-plot(zn.svgm,vgm1)
-ko.gstat <- gstat(id="Tmt.trans", formula=Tmt.trans~1, model=vgm1, data=temp2.sp,nmin=2, nmax=30)
+# Kriging Ordinario
 
-#03. Kriging predictions with grid (gstat)
-grillasin<-as.data.frame(IDSTA.OV)
-coordinates(grillasin) = ~x+y
-gridded(grillasin)=T
-croatia.ks.ok = predict(ko.gstat,grillasin) 
-
-#04. Back transform using RGeostats
-ko.bts = cbind(coordinates(croatia.ks.ok),croatia.ks.ok@data)
+pron.pts.ko<-krige(Tmt.trans~1,temp2s,borde,model=m) 
+ko.bts = cbind(coordinates(pron.pts.ko),pron.pts.ko@data)
 ko.bts.db = db.create(ko.bts,autoname = F)
-ko.tempdb = anam.y2z(ko.bts.db,names="Tmt.trans.pred",anam = mdb.herm)
-ko.tempdbvar = anam.y2z(ko.bts.db,names="Tmt.trans.var",anam = mdb.herm)
+ko.tempdb = anam.y2z(ko.bts.db,names="var1.pred",anam = mdb.herm)
+ko.tempdbvar = anam.y2z(ko.bts.db,names="var1.var",anam = mdb.herm)
+min(ko.tempdb@items$Raw.var1.pred)
+max(ko.tempdb@items$Raw.var1.pred)
+
 #Prediction map
-IDSTA.OV@data$pred.ko.temp <- ko.tempdb@items$Raw.Tmt.trans.pred
-spplot(IDSTA.OV,"pred.ko.temp")
-#Var map
-IDSTA.OV@data$var.ko.temp <- ko.tempdbvar@items$Raw.Tmt.trans.var
-spplot(IDSTA.OV,"var.ko.temp")
-IDSTA.OV@data$var.ko.temp.sqrt <- sqrt(ko.tempdbvar@items$Raw.Tmt.trans.var)
+grilla_ko<-grillabaser[,52:53]
+grilla_ko$pred<-ko.tempdb@items$Raw.var1.pred
+grilla_ko$var<-ko.tempdbvar@items$Raw.var1.var
+names(grilla_ko) <- c("E","N","pre","var")
+coordinates(grilla_ko)= ~E+N
+
+spplot(grilla_ko, "pre", main="Precipitación Media Anual \nPredicciones Kriging Ordinario", col.regions=bpy.colors(100), cuts=10, cex.main=0.2, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)",  key.space=list(space="right", cex=0.6))
+
+spplot(grilla_ko, "var", main="Precipitación Media Anual \nErrores Kriging Ordinario", col.regions=bpy.colors(100), cuts=10, cex.main=0.2, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)",  key.space=list(space="right", cex=0.6))
 
 
-##############################
-######## KRIGING SIMPLE#######
-##############################
+# Kriging Simple
 
-mu<-mean(temp2.sp$Tmt.trans)
-ks.gstat <- gstat(id="Tmt.trans", formula=Tmt.trans~1, model=vgm1, data=temp2.sp,nmin=2, nmax=30,beta=mu)
+pron.pts.ks<-krige(Tmt.trans~1,temp2s,borde,model=m,beta=mu) 
 
-#03. Kriging predictions with grid (gstat)
-grillasin<-as.data.frame(IDSTA.OV)
-coordinates(grillasin) = ~x+y
-gridded(grillasin)=T
-croatia.ks.ok = predict(ks.gstat,grillasin) 
-
-#04. Back transform using RGeostats
-gridded(grillasin)=T
-ks.bts = cbind(coordinates(croatia.ks.ok),croatia.ks.ok@data)
+ks.bts = cbind(coordinates(pron.pts.ks),pron.pts.ks@data)
 ks.bts.db = db.create(ks.bts,autoname = F)
-ks.tempdb = anam.y2z(ks.bts.db,names="Tmt.trans.pred",anam = mdb.herm)
-ks.tempdbvar = anam.y2z(ks.bts.db,names="Tmt.trans.var",anam = mdb.herm)
+ks.tempdb = anam.y2z(ks.bts.db,names="var1.pred",anam = mdb.herm)
+ks.tempdbvar = anam.y2z(ks.bts.db,names="var1.var",anam = mdb.herm)
+min(ks.tempdb@items$Raw.var1.pred)
+max(ks.tempdb@items$Raw.var1.pred)
+
 #Prediction map
-IDSTA.OV@data$pred.ks.temp <-ks.tempdb@items$Raw.Tmt.trans.pred
-spplot(IDSTA.OV,"pred.ks.temp")
-#Var map
-IDSTA.OV@data$var.ks.temp.sqrt <- sqrt(ks.tempdbvar@items$Raw.Tmt.trans.var)
-spplot(IDSTA.OV,"var.ks.temp.sqrt")
+grilla_ks<-grillabaser[,52:53]
+grilla_ks$pred<-ks.tempdb@items$Raw.var1.pred
+grilla_ks$var<-ks.tempdbvar@items$var1.var
+names(grilla_ks) <- c("E","N","pre","var")
+coordinates(grilla_ks)= ~E+N
+
+spplot(grilla_ks, "pre", main="Precipitación Media Anual \nPredicciones Kriging Ordinario", col.regions=bpy.colors(100), cuts=10, cex.main=0.2, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)",  key.space=list(space="right", cex=0.6))
+
+spplot(grilla_ks, "var", main="Precipitación Media Anual \nErrores Kriging Ordinario", col.regions=bpy.colors(100), cuts=10, cex.main=0.2, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)",  key.space=list(space="right", cex=0.6))
 
 
-IDSTA.OV@data$pred.ks.temp.res <- abs(Tmt - IDSTA.OV$pred.ko.temp)
-spplot(IDSTA.OV, "pred.ks.temp.res", main="RES ABS \nKriging simple", col.regions=bpy.colors(100), cuts=10, cex.main=0.7, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)", key.space=list(space="right", cex=0.6))
-spplot(IDSTA.OV, "var.ks.temp.sqrt", main="SQRT(VAR) \nKriging simple", col.regions=bpy.colors(100), cuts=10, cex.main=0.7, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)", key.space=list(space="right", cex=0.6))
+KO.esf.cv.z <- krige.cv(Tmt.trans~1,temp2s,borde,model=m)     
+KS.esf.cv.z <- krige.cv(Tmt.trans~1,temp2s,borde,model=m,beta=mu) 
+
+# Validación
+
+resultados.cv.z <- rbind(criterio.cv(KO.esf.cv.z), criterio.cv(KS.esf.cv.z))
+rownames(resultados.cv.z) <- c("KO.esf.cv.z", "KS.esf.cv.z")
+resultados.cv.z
 
 
+#Krigin universal 1
 
-#SALIDA GRAFICA
+x <- krige(Tmt.trans~E+N,temp2s,borde,model=m, block = c(40,40))
+spplot(x["var1.pred"], main = "universal kriging predictions")
 
-l2 = list("sp.points", So, pch = 3, col = "grey")
-rw.colors <- colorRampPalette(c("red", "yellow"))
-p1 <- 
-  spplot(IDSTA.OV, "pred.ks.temp", main="Temperatura media 25 de enero de 2008 Predicciones \nKriging simple", col.regions=bpy.colors(100), cuts=10, cex.main=0.7, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)", key.space=list(space="right", cex=0.6))
-p2 <- 
-  spplot(IDSTA.OV, "var.ks.temp.sqrt", main="Temperatura media 25 de enero de 2008 Errores \nKriging simple", col.regions=bpy.colors(100), cuts=10, cex.main=0.7, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)", key.space=list(space="right", cex=0.6))
-p3 <- 
-  spplot(IDSTA.OV, "pred.ko.temp", main="Temperatura media 25 de enero de 2008 Predicciones \nKriging ordinario", col.regions=bpy.colors(100), cuts=10, cex.main=0.7, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)", key.space=list(space="right", cex=0.6))
-p4 <- 
-  spplot(IDSTA.OV, "var.ko.temp.sqrt", main="Temperatura media 25 de enero de 2008 Errores \nKriging ordinario", col.regions=bpy.colors(100), cuts=10, cex.main=0.7, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)", key.space=list(space="right", cex=0.6))
-print(p1, split = c(1, 1, 2, 2), more = T)
-print(p2, split = c(2, 1, 2, 2), more = T)
-print(p3, split = c(1, 2, 2, 2), more = T)
-print(p4, split = c(2, 2, 2, 2), more = T)
-
-writeAsciiGrid(IDSTA.OV@data$var.ks.temp, "ko.asc")
-write.asciigrid(pred.ks.temp, "ko.asc")
+x <- krige.cv(Tmt.trans~E+N,temp2s,borde,model=m)
+criterio.cv(x)
