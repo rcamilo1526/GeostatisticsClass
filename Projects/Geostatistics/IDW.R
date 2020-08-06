@@ -66,15 +66,15 @@ P.opt <- optim( par=1 , fn=p.optimo, gr= "Nelder-Mead", method = "Nelder-Mead", 
 P.opt <- optim( par=1 , fn=p.optimo, method = "L-BFGS-B", formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist=Inf, var.reg=Tmt)
 
 p1 <- p.optimo(p=1, formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist= Inf, var.reg=Tmt)
-p2 <- p.optimo(p=2, formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist=Inf, var.reg=Tmt)
-p3 <- P$objective
+p3 <- p.optimo(p=2, formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist=Inf, var.reg=Tmt)
+p2 <- P$objective
 p4 <- p.optimo(p=3, formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist=Inf, var.reg=Tmt)
 p5 <- p.optimo(p=4, formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist=Inf, var.reg=Tmt)
 p6 <- p.optimo(p=5, formula=Tmt~1, locations=~N+E, data=IDW, newdata=IDW, nmax=10, nmin=10, maxdist=Inf, var.reg=Tmt)
 
 RMSPE <- c(p1, p2, p3, p4, p5, p6)
 x11()
-plot(c(1,2,P$minimum,3,4,5),RMSPE, main="Gráfico de optimización del Parámetro (P)\n Distancia Inversa Ponderada", ylab="RMSPE", xlab="p óptimo = 1.5775117", type="l",color='red')
+plot(c(1,P$minimum,2,3,4,5),RMSPE, main="Gráfico de optimización del Parámetro (P)\n Distancia Inversa Ponderada", ylab="RMSPE", xlab="p óptimo = 1.5775117", type="l",color='red')
 ####Interpolacion###########
 
 idw.p <- idw(Tmt~1,~ N+E, IDW, puntosxyi, idp=1.577517)
@@ -85,5 +85,5 @@ min(grafi$var1.pred)#21.2182
 max(grafi$var1.pred)#36.53699
 mean(grafi$var1.pred)#29.28603
 x11()
-spplot(grafi ,"var1.pred", main="Interpolaciones de Distancia Inversa\n Ponderada de la Precipitación\np=1.5775117", col.regions=bpy.colors(150), cuts=150, cex.main=0.5, regions=T, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)",  key.space=list(space="left", cex=0.6))
+spplot(grafi ,"var1.pred", main="Interpolaciones de Distancia Inversa\n Ponderada de la Temperatura\np=1.5775117", col.regions=bpy.colors(150), cuts=150, cex.main=0.5, regions=T, scales = list(draw =T), xlab="Este (m)", ylab = "Norte (m)",  key.space=list(space="left", cex=0.6))
 

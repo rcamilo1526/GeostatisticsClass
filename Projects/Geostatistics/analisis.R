@@ -29,13 +29,39 @@ IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
     # library(stargazer)
     # 
     # stargazer(data.frame(Hrdem=Hrdem,Hrdsea=Hrdsea,Hrtwi=Hrtwi,Tmt=Tmt,N=N,E=E))
-    
+contour(E, N, Hrdem)
+,  lty = "solid",
+            vfont = c("sans serif", "plain")) 
+contorno<-cbind(E,N,Hrdem)
+contorno<-as.data.frame(contorno)
+names(contorno)=c('x','y','z')
+coordinates(contorno)=~x+y
+points(croacia.geoR, pch=20, nlev=21) #añadir posiciones datos
+contour(E,N,z,add=T, nlev=21)
+library(plotly)
+install.packages('plotly')
+levelplot(Hrdem ~ E + N)
+x<-E
+y<-N
+contour
+plotly(
+  x = c(E), 
+  y = c(N), 
+  z = matrix(c(Hrdem), nrow = length(x), ncol = length(x)),
+  type = "contour" 
+)
+
+plotly
+z <- matrix(x,y,z=c(Hrdem),nrow=length(x),ncol=length(y))
+contour(E,)
 #guardar geodata 
-  croacia.geoR <- as.geodata(IDSTAr.ov, data.col = 'LST2008_07_03') 
+  croacia.geoR <- as.geodata(IDSTAr.ov, data.col = 'HRdem') 
   
     E<-croacia.geoR$coords[,1]
     N<-croacia.geoR$coords[,2]
     # Objeto del tipo geodata (coordenadas y datos)
+    x11()
+    contourLines(N,E,Hrdem)
     x11()
     points.geodata(croacia.geoR, x.leg=400000, y.leg=4830000,  pt.div="quintile")
     # Graficar los datos (puntos) y ver simbolos graduados, además la opción "add.to.plot" es útil para adicionar opciones de la instrucción "plot", como en este caso la grilla.
@@ -340,10 +366,15 @@ IDSTAr.ov <- IDSTA.ov[!is.na(IDSTA.ov$LST2008_07_03),]
   point <- point(data.or)
   pair <- pair(point,num.lags=30,maxdist=dmax)
   
-  
-  v <- est.variograms(point,pair,"t",trim=0.1) 
-  
-  ####Gráficos de semivariogramas experimentales
+  # library(xtable)
+  # library(xlsx)
+  v <- est.variograms(point,pair,"t",trim=0.1)
+  ex<-as.data.frame(v[,c(2,3,7)])
+  ex<-ex[order(ex$bins),]
+  names(ex)<-c('h','s','p')
+  xtable(ex)
+  write.xlsx2(ex,'D:/Documentos/11 semestre/Geoestadística/Tareas geoestadística/Ejercicios inventados/datos_sv.xlsx')
+  # ####Gráficos de semivariogramas experimentales
   x11()
   
   layout(Conf2x2)
