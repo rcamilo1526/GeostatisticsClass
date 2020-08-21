@@ -31,14 +31,6 @@ N<-croacia.geoR$coords[,2]
 plot(E,N)
 
 
-temp2.spb<-temp2[,1:2]#coordenadas
-# temp2.spb<- puntosxyb
-temp2.spb$Tmt<-Tmt
-length(Tmt)
-coordinates(temp2.spb)
-head(temp2.spb) #estos son mis datos, N, E Y Tmt(temperatura)
-
-
 data2<-cbind(E, N, Tmt)
 temp2<-as.data.frame(data2)
 temp2.sp <- SpatialPoints(as.data.frame(temp2)) 
@@ -50,33 +42,34 @@ temp2.spb$Tmt<-Tmt
 #toda la grilla para predecir sobre esta
 grillabaser<-as.data.frame(IDSTA.OV) #se vuelve data frame
 puntosxyb<-grillabaser[,52:53] #se seleccionan las columnas donde estan las coordenadas x, y
-names(puntosxyb) <- c("E","N")#esta en x, y entonces cambiamos a N y E para ppoder hacer las RBF
+puntosxyb<-grillabaser[,c('x','y')]
 coordinates(puntosxyb)=~E+N
+x11()
 plot(puntosxyb)
 
 
 #Hacemos la optimzacion para cada una de RBF
 
-###### Multicuadratica########## RMSPE dio=2.494421
-op.m <- graph.rbf(Tmt~1, temp2.spb, eta.opt=TRUE, rho.opt=TRUE, n.neigh=9, func="M", 
+###### Multicuadratica########## RMSPE dio=2.498376
+op.m <- graph.rbf(Tmt~1, temp2.spb, eta.opt=TRUE, rho.opt=TRUE, n.neigh=15, func="M", 
                   eta.dmax=2, rho.dmax=2, x0=c(0.1,0.1), iter=500)
-###### Multicuadratica inversa##########RMSPE dio=2.610865
-op.mi <- graph.rbf(Tmt~1, temp2.spb, eta.opt=TRUE, rho.opt=TRUE, n.neigh=9, func="IM", 
+###### Multicuadratica inversa##########RMSPE dio=2.592904
+op.mi <- graph.rbf(Tmt~1, temp2.spb, eta.opt=TRUE, rho.opt=TRUE, n.neigh=15, func="IM", 
                    eta.dmax=2, rho.dmax=2, x0=c(0.1,0.1), iter=500)
-###### Spline con tension ##########RMSPE dio=2.399818
-op.st <- graph.rbf(Tmt~1, temp2.spb, eta.opt=TRUE, rho.opt=TRUE, n.neigh=9, func="ST",
+###### Spline con tension ##########RMSPE dio=2.38963
+op.st <- graph.rbf(Tmt~1, temp2.spb, eta.opt=TRUE, rho.opt=TRUE, n.neigh=15, func="ST",
                    eta.dmax=2, rho.dmax=2, x0=c(0.1,0.1), iter=500)
-###### Spline completamente regularizada ##########RMSPE dio=2.333328
-op.crs <- graph.rbf(Tmt~1, temp2.spb, eta.opt=TRUE, rho.opt=TRUE, n.neigh=9, func="CRS",
+###### Spline completamente regularizada ##########RMSPE dio=2.330511
+op.crs <- graph.rbf(Tmt~1, temp2.spb, eta.opt=TRUE, rho.opt=TRUE, n.neigh=15, func="CRS",
+                    eta.dmax=2, rho.dmax=2, x0=c(0.1,0.1), iter=800)
+###### Spline capa delgada ##########RMSPE dio=2.824071
+op.tps <- graph.rbf(Tmt~1, temp2.spb, eta.opt=TRUE, rho.opt=TRUE, n.neigh=15, func="TPS",
                     eta.dmax=2, rho.dmax=2, x0=c(0.1,0.1), iter=500)
-###### Spline capa delgada ##########RMSPE dio=3.053522
-op.tps <- graph.rbf(Tmt~1, temp2.spb, eta.opt=TRUE, rho.opt=TRUE, n.neigh=9, func="TPS",
-                    eta.dmax=2, rho.dmax=2, x0=c(0.1,0.1), iter=500)
-###### Exponencial ##########RMSPE dio=2.611089
-op.expon <- graph.rbf(Tmt~1, temp2.spb, eta.opt=TRUE, rho.opt=TRUE, n.neigh=9, func="EXPON",
+###### Exponencial ##########RMSPE dio=2.593215
+op.expon <- graph.rbf(Tmt~1, temp2.spb, eta.opt=TRUE, rho.opt=TRUE, n.neigh=15, func="EXPON",
                       eta.dmax=2, rho.dmax=2, x0=c(0.1,0.1), iter=500)
-###### Gaussiana#########RMSPE dio=2.611089
-op.gau <- graph.rbf(Tmt~1, temp2.spb, eta.opt=TRUE, rho.opt=TRUE, n.neigh=9, func="GAU",
+###### Gaussiana#########RMSPE dio=2.593215
+op.gau <- graph.rbf(Tmt~1, temp2.spb, eta.opt=TRUE, rho.opt=TRUE, n.neigh=15, func="GAU",
                     eta.dmax=2, rho.dmax=2, x0=c(0.1,0.1), iter=500)
 
 #multicuadratica
@@ -87,24 +80,24 @@ warnings()
 cv.mi <- rbf.tcv(Tmt~1, data=as.data.frame( temp2.spb) , eta=2,rho=0, n.neigh=9, func="IM") 
 criterio.cv(cv.mi)
 #ST
-cv.st <- rbf.tcv(Tmt~1, data=as.data.frame( temp2.spb) , eta=0.0002882479,rho=0.07792173, n.neigh=9, func="ST") 
+cv.st <- rbf.tcv(Tmt~1, data=as.data.frame( temp2.spb) , eta=0.00027482429,rho=0.1054797, n.neigh=9, func="ST") 
 criterio.cv(cv.st)
 #CRS
-cv.crs <- rbf.tcv(Tmt~1, data=as.data.frame( temp2.spb) , eta=0.0003768368,rho=0.07983177,n.neigh=9, func="CRS") 
+cv.crs <- rbf.tcv(Tmt~1, data=as.data.frame( temp2.spb) , eta=0.000406909,rho=0.1075205,n.neigh=9, func="CRS") 
 criterio.cv(cv.crs)
 #TPS
-cv.tps <- rbf.tcv(Tmt~1, data=as.data.frame( temp2.spb) , eta=2,rho=0.02031208, n.neigh=9, func="TPS") 
+cv.tps <- rbf.tcv(Tmt~1, data=as.data.frame( temp2.spb) , eta=2,rho=1.999798, n.neigh=9, func="TPS") 
 criterio.cv(cv.tps)
 #EXPONENCIAL
-cv.expon <- rbf.tcv(Tmt~1, data=as.data.frame( temp2.spb) , eta=0.1,rho=0.12, n.neigh=9, func="EXPON") 
+cv.expon <- rbf.tcv(Tmt~1, data=as.data.frame( temp2.spb) , eta=0.1,rho=0.1, n.neigh=9, func="EXPON") 
 criterio.cv(cv.expon)
 #GAUSSIANA
-cv.gau <- rbf.tcv(Tmt~1, data=as.data.frame( temp2.spb) , eta=0.1,rho=0.12, n.neigh=9, func="GAU") 
+cv.gau <- rbf.tcv(Tmt~1, data=as.data.frame( temp2.spb) , eta=0.1,rho=0.1, n.neigh=9, func="GAU") 
 criterio.cv(cv.gau)
 
 
 #se elije CRS
-pred.rbf.st<-rbf(Tmt~1, data=as.data.frame( temp2.spb) , eta=0.0003768368,rho=0.07983177,n.neigh=9, newdata=puntosxyb, func="CRS") 
+pred.rbf.st<-rbf(Tmt~1, data=as.data.frame( temp2.spb), eta=0.000406909,rho=0.1075205,n.neigh=10, newdata=puntosxyb, func="CRS") 
 # muestra el mapa de prediccion con la rbf Spline completamente regularizada
 puntosxyb$pred <- pred.rbf.st$var1.pred
 grafb<-as.data.frame(puntosxyb)
@@ -120,3 +113,4 @@ max(pred.rbf.st$var1.pred)#34.51251
 mean(pred.rbf.st$var1.pred)#29.39422
 min(Tmt)
 max(Tmt)
+mean(Tmt)

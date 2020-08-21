@@ -91,14 +91,19 @@ spplot(grilla_ko, "var", main="Temperatura media terrestre \nVarianzas Kriging O
 
 typeof(pron.pts.ko)
 # Kriging Simple
-pron.pts.ks<-krige(Tmt.trans~1,temp2s,borde,model=m,beta=mu) 
+
+ms = vgm (2.1,"Exp",44000, 0.01)
+pron.pts.ks<-krige(Tmt.trans~1,temp2s,borde,model=ms,beta=mu) 
 
 ks.bts = cbind(coordinates(pron.pts.ks),pron.pts.ks@data)
 ks.bts.db = db.create(ks.bts,autoname = F)
 ks.tempdb = anam.y2z(ks.bts.db,names="var1.pred",anam = mdb.herm)
 ks.tempdbvar = anam.y2z(ks.bts.db,names="var1.var",anam = mdb.herm)
-min(ko.tempdbvar@items$var1.var)
-max(ko.tempdbvar@items$var1.var)
+min(ks.tempdb@items$Raw.var1.pred)
+max(ks.tempdb@items$Raw.var1.pred)
+mean(ks.tempdb@items$Raw.var1.pred)
+min(ks.tempdbvar@items$var1.var)
+max(ks.tempdbvar@items$var1.var)
 mea
 min(Tmt)
 max(Tmt)
@@ -116,7 +121,7 @@ spplot(grilla_ks, "var", main="Temperatura media terrestre \nVarianza Kriging Si
 
 
 KO.esf.cv.z <- krige.cv(Tmt.trans~1,temp2s,borde,model=m)     
-KS.esf.cv.z <- krige.cv(Tmt.trans~1,temp2s,borde,model=m,beta=mu) 
+KS.esf.cv.z <- krige.cv(Tmt.trans~1,temp2s,borde,model=ms,beta=mu) 
 
 Tmt<
 # Validación
