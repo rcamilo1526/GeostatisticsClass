@@ -89,6 +89,8 @@ raintest(lm_fit)
 shapiro.test(residuals(lm_fit))
 library(car)
 vif(lm_fit)
+
+UseMethod("vif",lm_fit)
 length(N$PRICE)
 hetero.plot <- function(model) {
   plot(residuals(model) ~ model$yhat)
@@ -263,7 +265,10 @@ col.poly1$WLOTSZ <- lag.listw(bal.lw, col.poly1$LOTSZ)
 # X <- model.matrix(CRIME~INC + HOVAL, data=as.data.frame(col.poly))
 # WX <- create_WX(X,a.lw)
 a.lw1 <- nb2listw(bal.lags[[1]], style="W")
+col.poly1$W1DWELL <- lag.listw(a.lw1, col.poly1$DWELL)
+
 a.lw2 <- nb2listw(bal.lags[[2]], style="W")
+col.poly1$W2NBATH <- lag.listw(a.lw2, col.poly1$NBATH)
 a.lw3 <- nb2listw(bal.lags[[3]], style="W")
 a.lw4 <- nb2listw(bal.lags[[4]], style="W")
 a.lw5 <- nb2listw(bal.lags[[5]], style="W")
@@ -276,7 +281,7 @@ col.poly1$W4PRICE <- lag.listw(a.lw4,col.poly1$PRICE)
 col.poly1$W5PRICE <- lag.listw(a.lw5,col.poly1$PRICE)
 col.poly1$W6PRICE <- lag.listw(a.lw6,col.poly1$PRICE, zero.policy =T)
 
-t.glm<-glm(PRICE ~ W1PRICE+WDWELL+WNBATH+WPATIO+WFIREPL+WAC+WBMENT+WGAR+WCITCOU+WLOTSZ+X+Y+WX+WY,data=col.poly1, family=poisson(link="log"), na.action=na.exclude)
+t.glm<-glm(PRICE ~ W1PRICE+W1DWELL+WDWELL+W2NBATH++W2NBATH+WFIREPL+WAC+WBMENT+WGAR+WCITCOU+WLOTSZ+X+Y+WX+WY,data=col.poly1, family=poisson(link="log"), na.action=na.exclude)
 summary(t.glm, Nagelkerke=T)
 residuals.glm <- balPol$PRICE-fitted.values(t.glm)
 shapiro.test(residuals.glm)
@@ -297,14 +302,16 @@ NK <- function(obj, y) {
 #https://www.rdocumentation.org/packages/sphet/versions/1.7/topics/gstslshet
 
 #Linear espacial heterocedastico
-model.h.sarar<- gstslshet(formula = PRICE~ DWELL+NBATH+PATIO+FIREPL+BMENT+AC+GAR+CITCOU+LOTSZ,  
+model.h.sarar<- gstslshet(formula = PRICE~ DWELL+NBATH+PATIO+FIREPL+BMENT+AC+CITCOU+LOTSZ,  
                      listw = bal.lw, data = balPol ,sarar=T)
 summary(model.h.sarar, Nagelkerke=T)
 impacts(model.h.sarar)
-summary(model.hac, Nagelkerke=T)
+summary(model.h.sarar, Nagelkerke=T)
+pseudoR2.glm <- cor(model.h.sarar$yhat,balPol$PRICE)^2
+model.h.sarar$yhat
 #bptest.sarlm(model.hac)
 hetero.plot <- function(model) {
-  plot(residuals(model) ~ model$yhat)
+  plot(residuals(model) ~ model$yhat,ylim=c(-60,60))
   abline(h=0, lty="dotted")
   lines(lowess(model$yhat, residuals(model)), col="red")
 }
@@ -316,17 +323,25 @@ attributes(Pdist)
 res <- stslshac(formula = PRICE~ DWELL+NBATH+PATIO+FIREPL+BMENT+AC+GAR+CITCOU+LOTSZ,  listw = bal.lw, data = balPol, 
                 distance = Pdist, type = 'Triangular')
 summary(res)
+x11()
 hetero.plot(res)
 bptest(res)
-
-
+predict(res)
+vif(res)
+UseMethod("vif",res)
+bptest.sarlm(res)
+pseudoR2.glm <- cor(res$yhat,balPol$PRICE)^2
+residuals(res)
 hetero.plot(col.lag.sm)
 shapiro.test(res$residuals)
 
-################################################3
+shapiro.test(model.h.sarar$residuals)
+bptest(col.lag.sm)
+s2slshac()
+vif(res)res.model################################################3
 #########QUITAR ATIPICOS#######################
 ############################################
-
+vif()
 # mod <- lm(PRICE ~ 1,data=balPol@data)
 # cooksd <- cooks.distance(mod)
 # plot(cooksd, pch="*", cex=2)
@@ -398,8 +413,10 @@ W <- as(as_dgRMatrix_listw(bal.lw), "CsparseMatrix")
 trMatc <- trW(W, type="mult")
 trMC <- trW(W, type="MC")
 res$coefficients["Wy"]
-impacts(res, listw=bal.lw)
-attributes(res)
+impactos <- impacts(res, listw=bal.lw)
+names(impactos)
+xtable(as.data.frame(cbind(impactos$direct,impactos$indirect,impactos$total)))
+
 # Impacto Direct Wy:
 SrW.I <- solve(diag(209)-as.numeric(res$coefficients["Wy"])*as.matrix(W))%*%diag(209)*as.numeric(res$coefficients["Wy"])
 sum(diag(SrW.I))/209
@@ -407,10 +424,10 @@ sum(diag(SrW.I))/209
 # Impacto Indirect INC:
 (sum(SrW.I) - sum(diag(SrW.I)))/209
 
-
+length(res$yhat)
 
 # Impacto Total INC:
-rep(1,209)%*%(SrW.I)%*%matrix(rep(1,209),ncol=1)/209              # otra forma mas simple es: sum(SrW.I)/49
+rep(1,209)%*%(SrW.I)%*%matrix(rep(1,209),ncol=1)/209              # otra forma mas simple es: sum(SrW.I)/209
 
 
 
